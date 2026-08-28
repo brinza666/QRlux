@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/android")({ component: AndroidPage });
 
-const GH_SEND = "https://github.com/brinza666/QRlux/releases/download/v1.0.0/lux-send.apk";
-const GH_RECV = "https://github.com/brinza666/QRlux/releases/download/v1.0.0/lux-receive.apk";
+const SITE = "https://brinza666.github.io/QRlux";
+const GH_SEND = `${SITE}/releases/lux-send.apk`;
+const GH_RECV = `${SITE}/releases/lux-receive.apk`;
 const RELEASE = "https://github.com/brinza666/QRlux/releases";
 
 function AndroidPage() {
@@ -77,7 +78,7 @@ function AndroidPage() {
               </a>
             </Button>
             <a href={GH_SEND} className="mt-2 block text-center text-xs text-muted underline-offset-2 hover:underline">
-              GitHub mirror
+              Public site copy
             </a>
           </article>
           <article className="rounded-xl border border-border bg-surface p-5">
@@ -93,13 +94,17 @@ function AndroidPage() {
               </a>
             </Button>
             <a href={GH_RECV} className="mt-2 block text-center text-xs text-muted underline-offset-2 hover:underline">
-              GitHub mirror
+              Public site copy
             </a>
           </article>
         </div>
 
         <p className="mt-8 text-sm text-muted">
-          Allow the browser to install unknown apps when you open the APK. Also on{" "}
+          Public site for any phone browser:{" "}
+          <a href={SITE} className="text-fg underline-offset-2 hover:underline">
+            brinza666.github.io/QRlux
+          </a>
+          . Also on{" "}
           <a href={RELEASE} className="text-fg underline-offset-2 hover:underline">
             GitHub Releases
           </a>

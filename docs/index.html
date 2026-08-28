@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#09090b" />
+    <title>LUX — files as light</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        background: #09090b;
+        color: #f4f4f5;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+      }
+      main { max-width: 440px; margin: 0 auto; }
+      .kicker {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: #71717a;
+      }
+      h1 { font-size: 2.2rem; font-weight: 500; letter-spacing: -0.03em; margin: 16px 0 8px; }
+      p { color: #a1a1aa; line-height: 1.5; }
+      .grid { display: grid; gap: 12px; margin-top: 28px; }
+      a.card {
+        display: block;
+        text-decoration: none;
+        color: inherit;
+        border: 1px solid #26262b;
+        background: #121214;
+        border-radius: 16px;
+        padding: 18px 18px 16px;
+      }
+      a.card strong { display: block; font-size: 1.05rem; margin-bottom: 6px; color: #f4f4f5; }
+      a.card span { display: block; font-size: 0.9rem; color: #a1a1aa; line-height: 1.45; }
+      a.primary { background: #f4f4f5; color: #09090b; border-color: #f4f4f5; }
+      a.primary strong, a.primary span { color: #09090b; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .note { margin-top: 28px; font-size: 0.85rem; color: #71717a; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="kicker">LUX · fountain QR</p>
+      <h1>Files, as light.</h1>
+      <p>
+        Download the Android installers here, or open Send on a computer and Receive
+        on this phone. No Play Store.
+      </p>
+      <div class="grid">
+        <a class="card primary" href="releases/lux-receive.apk" download>
+          <strong>Download Receive APK</strong>
+          <span>lux-receive.apk · ~142 KB · install later from Downloads</span>
+        </a>
+        <a class="card" href="releases/lux-send.apk" download>
+          <strong>Download Send APK</strong>
+          <span>lux-send.apk · ~142 KB · broadcast from a phone screen</span>
+        </a>
+        <div class="row">
+          <a class="card" href="app.html?mode=send">
+            <strong>Open Send</strong>
+            <span>PC browser — QR fountain</span>
+          </a>
+          <a class="card" href="app.html?mode=receive">
+            <strong>Open Receive</strong>
+            <span>Phone camera — catch the file</span>
+          </a>
+        </div>
+      </div>
+      <p class="note">
+        After download: Android may warn about unknown apps. Allow this browser, then Install.
+        Source: github.com/brinza666/QRlux
+      </p>
+    </main>
+  </body>
+</html>
