@@ -5,6 +5,7 @@ const links = [
   { to: "/how", label: "How it works" },
   { to: "/send", label: "Send" },
   { to: "/receive", label: "Receive" },
+  { to: "/android", label: "Android" },
 ] as const;
 
 export function SiteHeader() {

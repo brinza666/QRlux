@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Camera, Upload } from "lucide-react";
+import { ArrowRight, Camera, Smartphone, Upload } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { TransferStage } from "@/components/transfer-stage";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,12 @@ function Home() {
               <Link to="/receive">
                 <Camera className="size-4" />
                 Receive
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/android">
+                <Smartphone className="size-4" />
+                Android APKs
               </Link>
             </Button>
           </div>

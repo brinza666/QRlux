@@ -10,13 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AndroidRouteImport } from './routes/android'
 import { Route as HowRouteImport } from './routes/how'
 import { Route as ReceiveRouteImport } from './routes/receive'
 import { Route as SendRouteImport } from './routes/send'
+import { Route as AppReceiveRouteImport } from './routes/app.receive'
+import { Route as AppSendRouteImport } from './routes/app.send'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AndroidRoute = AndroidRouteImport.update({
+  id: '/android',
+  path: '/android',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HowRoute = HowRouteImport.update({
@@ -34,39 +42,83 @@ const SendRoute = SendRouteImport.update({
   path: '/send',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppReceiveRoute = AppReceiveRouteImport.update({
+  id: '/app/receive',
+  path: '/app/receive',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppSendRoute = AppSendRouteImport.update({
+  id: '/app/send',
+  path: '/app/send',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/android': typeof AndroidRoute
   '/how': typeof HowRoute
   '/receive': typeof ReceiveRoute
   '/send': typeof SendRoute
+  '/app/receive': typeof AppReceiveRoute
+  '/app/send': typeof AppSendRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/android': typeof AndroidRoute
   '/how': typeof HowRoute
   '/receive': typeof ReceiveRoute
   '/send': typeof SendRoute
+  '/app/receive': typeof AppReceiveRoute
+  '/app/send': typeof AppSendRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/android': typeof AndroidRoute
   '/how': typeof HowRoute
   '/receive': typeof ReceiveRoute
   '/send': typeof SendRoute
+  '/app/receive': typeof AppReceiveRoute
+  '/app/send': typeof AppSendRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/how' | '/receive' | '/send'
+  fullPaths:
+    | '/'
+    | '/android'
+    | '/how'
+    | '/receive'
+    | '/send'
+    | '/app/receive'
+    | '/app/send'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/how' | '/receive' | '/send'
-  id: '__root__' | '/' | '/how' | '/receive' | '/send'
+  to:
+    | '/'
+    | '/android'
+    | '/how'
+    | '/receive'
+    | '/send'
+    | '/app/receive'
+    | '/app/send'
+  id:
+    | '__root__'
+    | '/'
+    | '/android'
+    | '/how'
+    | '/receive'
+    | '/send'
+    | '/app/receive'
+    | '/app/send'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AndroidRoute: typeof AndroidRoute
   HowRoute: typeof HowRoute
   ReceiveRoute: typeof ReceiveRoute
   SendRoute: typeof SendRoute
+  AppReceiveRoute: typeof AppReceiveRoute
+  AppSendRoute: typeof AppSendRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -76,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/android': {
+      id: '/android'
+      path: '/android'
+      fullPath: '/android'
+      preLoaderRoute: typeof AndroidRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/how': {
@@ -99,14 +158,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SendRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/receive': {
+      id: '/app/receive'
+      path: '/app/receive'
+      fullPath: '/app/receive'
+      preLoaderRoute: typeof AppReceiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/send': {
+      id: '/app/send'
+      path: '/app/send'
+      fullPath: '/app/send'
+      preLoaderRoute: typeof AppSendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AndroidRoute: AndroidRoute,
   HowRoute: HowRoute,
   ReceiveRoute: ReceiveRoute,
   SendRoute: SendRoute,
+  AppReceiveRoute: AppReceiveRoute,
+  AppSendRoute: AppSendRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

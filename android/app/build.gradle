@@ -1,0 +1,81 @@
+plugins {
+    id "com.android.application"
+}
+
+def webDir = file("${rootDir}/../mobile-dist")
+
+android {
+    namespace "app.lux"
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+        vectorDrawables.useSupportLibrary true
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file("debug.keystore")
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+        }
+        release {
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+        }
+    }
+
+    flavorDimensions "role"
+    productFlavors {
+        send {
+            dimension "role"
+            applicationId "app.lux.send"
+            resValue "string", "app_name", "LUX Send"
+            buildConfigField "String", "LUX_MODE", "\"send\""
+        }
+        receive {
+            dimension "role"
+            applicationId "app.lux.receive"
+            resValue "string", "app_name", "LUX Receive"
+            buildConfigField "String", "LUX_MODE", "\"receive\""
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def flavor = variant.flavorName
+            outputFileName = "lux-${flavor}.apk"
+        }
+    }
+}
+
+dependencies {
+}
+
+tasks.register("copyWeb", Copy) {
+    from webDir
+    into layout.projectDirectory.dir("src/main/assets/www")
+    include "**/*"
+}
+
+preBuild.dependsOn copyWeb

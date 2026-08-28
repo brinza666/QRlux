@@ -1,7 +1,9 @@
 import { Download } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { getLuxAndroid } from "@/lib/lux/android-bridge";
 import type { CompleteResult } from "@/lib/lux/codec";
+import { bytesToB64 } from "@/lib/lux/qr";
 import { formatBytes, formatRate } from "@/lib/utils";
 
 export function CompleteCard({
@@ -13,11 +15,13 @@ export function CompleteCard({
 }) {
   const url = useMemo(() => URL.createObjectURL(result.blob), [result.blob]);
   const [text, setText] = useState<string | null>(null);
+  const [saved, setSaved] = useState<string | null>(null);
   const mime = result.header.mime;
   const isImage = mime.startsWith("image/");
   const isVideo = mime.startsWith("video/");
   const isAudio = mime.startsWith("audio/");
   const isText = mime.startsWith("text/") || mime === "application/json";
+  const android = getLuxAndroid();
 
   useEffect(() => {
     return () => URL.revokeObjectURL(url);
@@ -29,6 +33,20 @@ export function CompleteCard({
   }, [isText, result.blob]);
 
   const seconds = result.elapsedMs / 1000;
+
+  function saveOnPhone() {
+    if (!android) return;
+    try {
+      const reply = android.saveFile(
+        result.header.filename,
+        result.header.mime || "application/octet-stream",
+        bytesToB64(result.bytes),
+      );
+      setSaved(reply || "Saved to Downloads");
+    } catch (err) {
+      setSaved(err instanceof Error ? err.message : "Save failed");
+    }
+  }
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-surface">
@@ -63,17 +81,25 @@ export function CompleteCard({
         ) : null}
       </div>
       <div className="flex flex-wrap gap-2 px-4 py-3">
-        <Button asChild size="sm">
-          <a href={url} download={result.header.filename}>
+        {android ? (
+          <Button size="sm" onClick={saveOnPhone}>
             <Download className="size-3.5" />
-            Download
-          </a>
-        </Button>
+            Save to Downloads
+          </Button>
+        ) : (
+          <Button asChild size="sm">
+            <a href={url} download={result.header.filename}>
+              <Download className="size-3.5" />
+              Download
+            </a>
+          </Button>
+        )}
         {onReplay ? (
           <Button variant="outline" size="sm" onClick={onReplay}>
             Run again
           </Button>
         ) : null}
+        {saved ? <p className="w-full text-xs text-ok">{saved}</p> : null}
       </div>
     </div>
   );

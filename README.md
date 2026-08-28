@@ -16,8 +16,9 @@ Then:
 1. **Home** — live same-screen loopback. A JPEG is fountain-coded, painted as QR, and rebuilt in place.
 2. **Send** — pick a file (or a built-in sample). Keep the QR plate on screen.
 3. **Receive** — on a second device, grant camera, point at the sender. Start mid-stream if you want; fountain codes do not care which frames you catch.
+4. **Android** — two sideload APKs (`lux-send.apk`, `lux-receive.apk`) live in [`releases/`](releases/README.md). Open that folder on the phone and download for later install.
 
-`npm run typecheck` and `npm test` cover the TypeScript surface and the fountain round-trip.
+`npm run typecheck` and `npm test` cover the TypeScript surface and the fountain round-trip. `npm run build:apks` rebuilds both Android packages.
 
 ## How it works
 
@@ -46,6 +47,8 @@ There is **no encryption**. Anyone who can see the screen can capture the file. 
 | Built-in sample payloads | [`src/lib/lux/samples.ts`](src/lib/lux/samples.ts) |
 | Stream FPS, demo / send UI | [`src/components/transfer-stage.tsx`](src/components/transfer-stage.tsx) |
 | Camera receive | [`src/routes/receive.tsx`](src/routes/receive.tsx) |
+| Phone send / receive shells | [`src/components/app-send.tsx`](src/components/app-send.tsx), [`src/components/app-receive.tsx`](src/components/app-receive.tsx) |
+| Android WebView host | [`android/app/src/main/java/app/lux/MainActivity.java`](android/app/src/main/java/app/lux/MainActivity.java) |
 
 Useful knobs:
 
