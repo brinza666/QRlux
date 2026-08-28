@@ -1,12 +1,10 @@
-# Pre-generated APK payloads
+# Android installers
 
-These files are served by the web app at `/releases/lux-send.apk` and
-`/releases/lux-receive.apk` so a phone browser can download them, and so the
-Send page can broadcast them as fountain-QR samples.
+Internal sideload builds. Download one at a time, then install from the phone’s Downloads folder.
 
-| File | Package | Size |
-| --- | --- | --- |
-| `lux-send.apk` | `app.lux.send` | ~142 KB |
-| `lux-receive.apk` | `app.lux.receive` | ~142 KB |
+| File | App |
+| --- | --- |
+| `lux-receive.apk` | Catch a file |
+| `lux-send.apk` | Broadcast a file from the screen |
 
 Hashes: [SHA256SUMS](SHA256SUMS).

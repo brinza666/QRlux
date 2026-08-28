@@ -16,14 +16,14 @@ function AndroidPage() {
       <SiteHeader />
       <main className="mx-auto w-full max-w-2xl px-4 pb-24 sm:px-6">
         <p className="pt-6 font-mono text-[0.7rem] tracking-[0.22em] text-subtle uppercase">
-          Android
+          Internal · Android
         </p>
         <h1 className="mt-4 text-3xl font-medium tracking-tight sm:text-5xl">
-          Two phones, two APKs.
+          Two small installers
         </h1>
         <p className="mt-5 text-[0.95rem] leading-relaxed text-muted">
-          The installers are already on this site (~142 KB each). Download them in the phone
-          browser, or beam them as light from a PC — then install later.
+          Receive on the phone that catches files. Send on the phone that broadcasts. Download
+          one APK at a time (~152 KB). Uninstall the old copy first.
         </p>
 
         <section className="mt-8 rounded-xl border border-border bg-surface p-5">
@@ -31,17 +31,13 @@ function AndroidPage() {
           <h2 className="mt-2 text-lg font-medium">PC screen → phone browser</h2>
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-muted">
             <li>
-              On the computer, open Send and tap <span className="text-fg">Receive APK</span> (or
-              Send APK). The QR fountain starts immediately.
+              On the computer, open Send. It starts with a setup QR, then the Receive APK.
             </li>
             <li>
-              On the phone, open this same site in the browser and go to Receive. Point the camera
-              at the computer. No app install needed yet.
+              On the phone, open Receive. Allow camera — the main rear lens is used, not macro.
+              Point at the computer and hold still.
             </li>
-            <li>
-              When transfer completes, tap Download once for that APK. Do not start both
-              Send and Receive samples at the same time.
-            </li>
+            <li>When it finishes, tap Download once. Install later from Downloads.</li>
           </ol>
           <div className="mt-5 flex flex-wrap gap-2">
             <Button asChild>

@@ -14,7 +14,9 @@ dist/
 .grok/
 screenshots/
 attachments/
-artifacts/
+RECOVERY.md
+INTERNAL.md
+docs/RECOVERY.md
 *.tsbuildinfo
 mobile-dist/
 android/.gradle/

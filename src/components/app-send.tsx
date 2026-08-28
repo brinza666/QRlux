@@ -16,6 +16,7 @@ import { playCue, installAudioUnlock } from "@/lib/lux/feedback";
 import { drawUrlQr } from "@/lib/lux/qr";
 import { fileFromBlob, loadApkSample, makeNote, makeWindowLight } from "@/lib/lux/samples";
 import { loadTune, saveTune, type Tune } from "@/lib/lux/settings";
+import { isInternal, setInternal } from "@/lib/lux/internal";
 import { RECEIVE_WEB_URL } from "@/lib/lux/site";
 import { formatBytes } from "@/lib/utils";
 
@@ -35,7 +36,9 @@ export function AppSend() {
   const [runId, setRunId] = useState(0);
   const [tune, setTune] = useState<Tune>(tuneRef.current);
   const [showTune, setShowTune] = useState(false);
+  const [internal, setInternalOn] = useState(() => isInternal());
   const [deviceLabel, setDeviceLabel] = useState("");
+  const titleTaps = useRef(0);
 
   const applyTune = (next: Tune) => {
     const saved = saveTune(next);
@@ -147,7 +150,19 @@ export function AppSend() {
   return (
     <div className="lux-app flex min-h-dvh flex-col bg-bg text-fg">
       <header className="flex items-center justify-between gap-2 px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-1">
-        <p className="font-mono text-xs tracking-[0.16em] text-subtle uppercase">LUX Send</p>
+        <button
+          type="button"
+          className="font-mono text-xs tracking-[0.16em] text-subtle uppercase"
+          onClick={() => {
+            titleTaps.current += 1;
+            if (titleTaps.current >= 5) {
+              setInternal(true);
+              setInternalOn(true);
+            }
+          }}
+        >
+          LUX Send
+        </button>
         <p className="min-w-0 truncate font-mono text-xs text-muted">
           {deviceLabel}
           {stats.txFps ? ` · ${stats.txFps.toFixed(0)} fps` : ""}
@@ -211,10 +226,12 @@ export function AppSend() {
             {phase === "handshake" ? "Start fountain" : "Setup QR"}
           </Button>
         </div>
-        <Button size="sm" variant="ghost" onClick={() => setShowTune((v) => !v)}>
-          {showTune ? "Hide tune" : "Tune fps / hold / echo"}
-        </Button>
-        {showTune ? (
+        {internal ? (
+          <Button size="sm" variant="ghost" onClick={() => setShowTune((v) => !v)}>
+            {showTune ? "Hide advanced" : "Advanced"}
+          </Button>
+        ) : null}
+        {internal && showTune ? (
           <div className="max-h-[40dvh] overflow-y-auto rounded-xl border border-border bg-surface p-4">
             <TunePanel tune={tune} onChange={applyTune} />
           </div>

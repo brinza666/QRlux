@@ -4,7 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#09090b" />
-    <title>LUX — files as light</title>
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <title>LUX — internal</title>
     <style>
       :root { color-scheme: dark; }
       * { box-sizing: border-box; }
@@ -26,6 +27,7 @@
       }
       h1 { font-size: 2.2rem; font-weight: 500; letter-spacing: -0.03em; margin: 16px 0 8px; }
       p { color: #a1a1aa; line-height: 1.5; }
+      ol { color: #a1a1aa; line-height: 1.5; padding-left: 1.2rem; }
       .grid { display: grid; gap: 12px; margin-top: 28px; }
       a.card {
         display: block;
@@ -46,36 +48,35 @@
   </head>
   <body>
     <main>
-      <p class="kicker">LUX · fountain QR</p>
+      <p class="kicker">LUX · internal</p>
       <h1>Files, as light.</h1>
-      <p>
-        On a computer, Open Send. It starts with a setup QR (scan with the phone
-        camera — opens Receive if installed, otherwise the receive page), then
-        beams lux-receive.apk. Drag the FPS slider if the phone cannot lock.
-      </p>
+      <ol>
+        <li>Computer: Open Send. First QR opens Receive on the phone.</li>
+        <li>Phone: allow camera. Main rear lens is used (not macro).</li>
+        <li>Hold still on the square. Download once when ready.</li>
+      </ol>
       <div class="grid">
         <a class="card primary" href="https://github.com/brinza666/QRlux/releases/download/v1.0.0/lux-receive.apk">
           <strong>Download Receive APK</strong>
-          <span>lux-receive.apk · ~142 KB · install later from Downloads</span>
+          <span>lux-receive.apk · ~152 KB · install from Downloads</span>
         </a>
         <a class="card" href="https://github.com/brinza666/QRlux/releases/download/v1.0.0/lux-send.apk">
           <strong>Download Send APK</strong>
-          <span>lux-send.apk · ~142 KB · broadcast from a phone screen</span>
+          <span>lux-send.apk · ~152 KB · broadcast from a phone</span>
         </a>
         <div class="row">
           <a class="card" href="app.html?mode=send">
             <strong>Open Send</strong>
-            <span>PC — large QR, Receive APK by default, FPS slider</span>
+            <span>Computer — full-window QR</span>
           </a>
           <a class="card" href="app.html?mode=receive">
             <strong>Open Receive</strong>
-            <span>Phone camera — catch the file</span>
+            <span>Phone — catch the file</span>
           </a>
         </div>
       </div>
       <p class="note">
-        After download: Android may warn about unknown apps. Allow this browser, then Install.
-        Source: github.com/brinza666/QRlux
+        Internal use only. After download, allow this browser to install unknown apps.
       </p>
     </main>
   </body>

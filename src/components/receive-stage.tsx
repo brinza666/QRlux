@@ -6,9 +6,7 @@ import { StatGrid } from "@/components/stat-grid";
 import { Button } from "@/components/ui/button";
 import { useTransferCues } from "@/components/use-transfer-cues";
 import {
-  acquireCamera,
-  listCameras,
-  pickDefaultCamera,
+  acquireBestCamera,
   releaseCamera,
   setTorch,
   setZoom,
@@ -111,27 +109,21 @@ export function ReceiveStage({ variant }: { variant: "page" | "app" }) {
 
     (async () => {
       try {
-        const stream = await acquireCamera(deviceIdRef.current || undefined);
+        const opened = await acquireBestCamera(deviceIdRef.current || undefined);
         if (cancelled) {
           releaseCamera();
           return;
         }
+        const stream = opened.stream;
         video.srcObject = stream;
         video.muted = true;
         video.playsInline = true;
         video.disablePictureInPicture = true;
         await video.play();
-        const listed = await listCameras();
         if (!cancelled) {
-          setCameras(listed);
-          const used =
-            stream.getVideoTracks()[0]?.getSettings?.().deviceId ||
-            deviceIdRef.current ||
-            pickDefaultCamera(listed);
-          if (used && used !== deviceIdRef.current) {
-            deviceIdRef.current = used;
-            setDeviceId(used);
-          }
+          setCameras(opened.cameras);
+          deviceIdRef.current = opened.deviceId;
+          setDeviceId(opened.deviceId);
           setCaps(trackCaps());
         }
         setLive(true);

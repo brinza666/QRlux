@@ -16,7 +16,7 @@ export const Route = createRootRoute({
         content:
           "Transfer files as light. Fountain-coded QR frames, no network path between devices.",
       },
-      { name: "theme-color", content: "#09090b" },
+      { name: "robots", content: "noindex,nofollow,noarchive" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },

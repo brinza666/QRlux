@@ -13,7 +13,7 @@ export async function listCameras(): Promise<CameraInfo[]> {
   const cams = devices.filter((d) => d.kind === "videoinput");
   return cams.map((d, i) => {
     const label = d.label || `Camera ${i + 1}`;
-    const facing: CameraInfo["facing"] = /front|user|face/i.test(label)
+    const facing: CameraInfo["facing"] = /front|user|face|selfie/i.test(label)
       ? "user"
       : /back|rear|environment|world/i.test(label)
         ? "environment"
@@ -22,16 +22,32 @@ export async function listCameras(): Promise<CameraInfo[]> {
   });
 }
 
+function camIndex(label: string): number | null {
+  const m = label.match(/camera(?:2)?\s*(\d+)/i);
+  return m ? Number(m[1]) : null;
+}
+
+/** Higher is better. Macro / ultra-wide / front score last. Plain "wide" is the main lens. */
+export function scoreCamera(cam: CameraInfo): number {
+  const l = cam.label.toLowerCase();
+  if (cam.facing === "user" || /front|selfie|face/.test(l)) return -1000;
+  if (/\bmacro\b/.test(l)) return -900;
+  if (/depth|tof|infrared|\bir\b/.test(l)) return -800;
+  let s = 0;
+  if (/ultra[\s-]?wide|ultrawide/.test(l)) s -= 700;
+  else if (/\btele(photo)?\b/.test(l)) s -= 400;
+  if (cam.facing === "environment" || /back|rear|environment|world/.test(l)) s += 300;
+  if (/\bmain\b|\bprimary\b|\bstandard\b/.test(l)) s += 200;
+  if (/\bwide\b/.test(l) && !/ultra/.test(l)) s += 150;
+  const idx = camIndex(cam.label);
+  if (idx !== null) s += Math.max(0, 80 - idx * 25);
+  return s;
+}
+
 export function pickDefaultCamera(cams: CameraInfo[]): string {
-  const backMain = cams.find(
-    (c) =>
-      c.facing === "environment" &&
-      !/ultra|wide|tele|macro|depth/i.test(c.label),
-  );
-  if (backMain) return backMain.id;
-  const back = cams.find((c) => c.facing === "environment");
-  if (back) return back.id;
-  return cams[0]?.id ?? "";
+  if (!cams.length) return "";
+  const ranked = [...cams].sort((a, b) => scoreCamera(b) - scoreCamera(a));
+  return ranked[0]!.id;
 }
 
 export async function acquireCamera(deviceId?: string): Promise<MediaStream> {
@@ -59,6 +75,29 @@ export async function acquireCamera(deviceId?: string): Promise<MediaStream> {
     }
   }
   throw last instanceof Error ? last : new Error("Camera unavailable");
+}
+
+/** Open a camera, then switch to the best rear (non-macro) lens if the OS picked badly. */
+export async function acquireBestCamera(preferredId?: string): Promise<{
+  stream: MediaStream;
+  cameras: CameraInfo[];
+  deviceId: string;
+}> {
+  let stream = await acquireCamera(preferredId || undefined);
+  const cameras = await listCameras();
+  const used = stream.getVideoTracks()[0]?.getSettings?.().deviceId ?? "";
+  const best = preferredId || pickDefaultCamera(cameras);
+  if (best && used && best !== used && !preferredId) {
+    releaseCamera();
+    stream = await acquireCamera(best);
+  }
+  const id =
+    stream.getVideoTracks()[0]?.getSettings?.().deviceId ||
+    best ||
+    used ||
+    cameras[0]?.id ||
+    "";
+  return { stream, cameras, deviceId: id };
 }
 
 export function releaseCamera(): void {
