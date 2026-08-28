@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FeedbackToggle } from "@/components/feedback-toggle";
 import { QrPlate } from "@/components/qr-plate";
-import { ScanHud } from "@/components/scan-hud";
-import { StatGrid } from "@/components/stat-grid";
 import { Button } from "@/components/ui/button";
-import { useTransferCues } from "@/components/use-transfer-cues";
 import { startBroadcast } from "@/lib/lux/broadcast";
 import {
   emptyStats,
@@ -15,40 +12,65 @@ import {
 } from "@/lib/lux/codec";
 import { probeDevice } from "@/lib/lux/device";
 import { playCue, installAudioUnlock } from "@/lib/lux/feedback";
+import { drawUrlQr } from "@/lib/lux/qr";
 import { fileFromBlob, loadApkSample, makeNote, makeWindowLight } from "@/lib/lux/samples";
+import { FPS_DEFAULT, FPS_MAX, FPS_MIN, RECEIVE_WEB_URL } from "@/lib/lux/site";
 import { formatBytes } from "@/lib/utils";
 
 type SampleId = "photo" | "note" | "file" | "apk-send" | "apk-receive";
+type Phase = "handshake" | "fountain";
 
 export function AppSend() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fpsRef = useRef(FPS_DEFAULT);
   const [stats, setStats] = useState<RxStats>(emptyStats());
-  const [status, setStatus] = useState("Pick a file to fill the screen with QR frames.");
+  const [status, setStatus] = useState("Scan the first QR with your phone camera.");
   const [error, setError] = useState<string | null>(null);
-  const [running, setRunning] = useState(false);
-  const [sample, setSample] = useState<SampleId>("photo");
+  const [sample, setSample] = useState<SampleId>("apk-receive");
   const [picked, setPicked] = useState<FilePayload | null>(null);
-  const [armed, setArmed] = useState(false);
+  const [phase, setPhase] = useState<Phase>("handshake");
   const [runId, setRunId] = useState(0);
+  const [fps, setFps] = useState(FPS_DEFAULT);
   const [deviceLabel, setDeviceLabel] = useState("");
 
-  useTransferCues(stats, { error });
+  fpsRef.current = fps;
+
   useEffect(() => installAudioUnlock(), []);
   useEffect(() => {
     setDeviceLabel(probeDevice().label);
   }, []);
+
+  useEffect(() => {
+    if (phase !== "handshake") return;
+    let cancelled = false;
+    const paint = () => {
+      const canvas = canvasRef.current;
+      if (canvas && !cancelled) drawUrlQr(canvas, RECEIVE_WEB_URL);
+    };
+    paint();
+    const id = window.setInterval(paint, 800);
+    const auto = window.setTimeout(() => {
+      if (!cancelled) setPhase("fountain");
+    }, 7000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      window.clearTimeout(auto);
+    };
+  }, [phase, runId]);
 
   const loadPayload = useCallback(async (): Promise<FilePayload> => {
     if (picked) return picked;
     if (sample === "note") return makeNote();
     if (sample === "apk-send") return loadApkSample("send");
     if (sample === "apk-receive") return loadApkSample("receive");
-    return makeWindowLight();
+    if (sample === "photo") return makeWindowLight();
+    return loadApkSample("receive");
   }, [picked, sample]);
 
   useEffect(() => {
-    if (!armed) return;
+    if (phase !== "fountain") return;
     let cancelled = false;
     let stop: (() => void) | null = null;
     const statsRef = { current: emptyStats() };
@@ -59,12 +81,11 @@ export function AppSend() {
     (async () => {
       try {
         setError(null);
-        setStatus("Encoding fountain stream…");
+        setStatus("Encoding fountain…");
         const payload = await loadPayload();
         if (cancelled) return;
         const tx = await Transmitter.fromFile(payload);
         if (cancelled) return;
-        setRunning(true);
         playCue("start");
         setStatus(
           `${payload.filename} · ${formatBytes(payload.bytes.byteLength)} · ${tx.header.k} pieces`,
@@ -74,6 +95,8 @@ export function AppSend() {
           canvas: () => canvasRef.current,
           payloadBytes: payload.bytes.byteLength,
           filename: payload.filename,
+          handshakeUrl: RECEIVE_WEB_URL,
+          getTargetFps: () => fpsRef.current,
           onStats(patch) {
             statsRef.current = { ...statsRef.current, ...patch };
           },
@@ -82,7 +105,6 @@ export function AppSend() {
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Failed to start transfer");
-        setRunning(false);
       }
     })();
 
@@ -91,7 +113,7 @@ export function AppSend() {
       stop?.();
       window.clearInterval(flush);
     };
-  }, [armed, runId, loadPayload]);
+  }, [phase, runId, loadPayload]);
 
   async function onPick(list: FileList | null) {
     const file = list?.[0];
@@ -103,66 +125,95 @@ export function AppSend() {
     const payload = await fileFromBlob(file);
     setPicked(payload);
     setSample("file");
-    setArmed(true);
+    setPhase("fountain");
     setRunId((n) => n + 1);
   }
 
   function startSample(id: SampleId) {
     setPicked(null);
     setSample(id);
-    setArmed(true);
+    setPhase("fountain");
     setRunId((n) => n + 1);
   }
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg text-fg">
-      <header className="flex items-center justify-between px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2">
-        <p className="font-mono text-xs tracking-[0.18em] text-subtle uppercase">LUX Send</p>
-        <div className="flex items-center gap-2">
-          <p className="hidden font-mono text-xs text-muted sm:block">{deviceLabel}</p>
-          <FeedbackToggle />
-        </div>
+      <header className="flex items-center justify-between gap-2 px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-1">
+        <p className="font-mono text-xs tracking-[0.16em] text-subtle uppercase">LUX Send</p>
+        <p className="truncate font-mono text-xs text-muted">
+          {deviceLabel}
+          {stats.txFps ? ` · ${stats.txFps.toFixed(0)} fps` : ""}
+        </p>
+        <FeedbackToggle className="size-9" />
       </header>
 
-      <div className="px-4">
-        <div className="mx-auto w-full max-w-[min(92vmin,920px)]">
-          <QrPlate canvasRef={canvasRef} size="hero" />
+      <div className="flex min-h-0 flex-1 flex-col px-2">
+        <div className="mx-auto flex w-full max-w-[min(100vw,100dvh)] flex-1 items-center justify-center">
+          <QrPlate
+            canvasRef={canvasRef}
+            size="hero"
+            className="w-full max-w-[min(96vw,96dvh)]"
+          />
         </div>
-        <div className="mt-3">
-          <ScanHud stats={stats} role="send" />
-        </div>
-        <p className="mt-2 text-xs text-muted">{status}</p>
-        {error ? <p className="mt-1 text-xs text-fg">{error}</p> : null}
+        <p className="px-2 pt-2 text-center text-sm font-medium">
+          {phase === "handshake"
+            ? "Scan this with your phone camera — opens Receive, or the receive webpage"
+            : stats.filename
+              ? `Broadcasting ${stats.filename}`
+              : status}
+        </p>
+        <p className="px-2 text-center text-xs text-muted">
+          {phase === "handshake"
+            ? "If LUX Receive is installed it opens. If not, the browser opens ready to catch the file. Then keep this QR on screen."
+            : `${formatBytes(stats.payloadBytes || 0)} · ${stats.k || "—"} pieces · target ${fps} fps`}
+        </p>
+        {error ? <p className="px-2 text-center text-xs text-fg">{error}</p> : null}
       </div>
 
-      <div className="mt-4 px-4">
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <StatGrid stats={stats} role="send" />
-        </div>
-      </div>
-
-      <div className="mt-auto flex flex-col gap-3 px-4 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-        <p className="text-xs tracking-[0.14em] text-subtle uppercase">Payload</p>
-        <Button
-          variant={picked ? "default" : "outline"}
-          onClick={() => inputRef.current?.click()}
-        >
-          {picked ? picked.filename : "Your file"}
-        </Button>
-        <div className="grid grid-cols-2 gap-2">
+      <div className="flex flex-col gap-3 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <label className="flex items-center gap-3 text-xs text-muted">
+          <span className="w-10 shrink-0 font-mono text-fg">{fps} fps</span>
+          <input
+            type="range"
+            min={FPS_MIN}
+            max={FPS_MAX}
+            step={1}
+            value={fps}
+            onChange={(e) => setFps(Number(e.target.value))}
+            className="h-2 w-full accent-accent"
+            aria-label="Frame rate"
+          />
+        </label>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Button
             size="sm"
-            variant={sample === "photo" && !picked ? "default" : "outline"}
-            onClick={() => startSample("photo")}
+            variant={sample === "apk-receive" && !picked ? "default" : "outline"}
+            onClick={() => startSample("apk-receive")}
           >
-            Window light
+            Receive APK
           </Button>
           <Button
             size="sm"
-            variant={sample === "note" && !picked ? "default" : "outline"}
-            onClick={() => startSample("note")}
+            variant={sample === "apk-send" && !picked ? "default" : "outline"}
+            onClick={() => startSample("apk-send")}
           >
-            Plain note
+            Send APK
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => inputRef.current?.click()}>
+            {picked ? picked.filename : "Your file"}
+          </Button>
+          <Button
+            size="sm"
+            variant={phase === "handshake" ? "default" : "outline"}
+            onClick={() => {
+              if (phase === "handshake") setPhase("fountain");
+              else {
+                setPhase("handshake");
+                setRunId((n) => n + 1);
+              }
+            }}
+          >
+            {phase === "handshake" ? "Start fountain" : "Show setup QR"}
           </Button>
         </div>
         <input
@@ -171,15 +222,6 @@ export function AppSend() {
           className="sr-only"
           onChange={(e) => void onPick(e.target.files)}
         />
-        {running ? (
-          <p className="text-xs text-muted">
-            Fill the other camera with this plate. {deviceLabel}
-          </p>
-        ) : (
-          <p className="text-xs text-muted">
-            Files up to {formatBytes(MAX_FILE_BYTES)}. No network is used.
-          </p>
-        )}
       </div>
     </div>
   );

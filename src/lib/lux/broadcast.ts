@@ -1,27 +1,32 @@
-import { fpsFromEncodeMs, probeDevice } from "./device";
-import { bytesToB64, drawMatrix, encodeFrameQr, qrVersionForBytes } from "./qr";
+import { fpsFromEncodeMs } from "./device";
+import { bytesToB64, drawMatrix, drawUrlQr, encodeFrameQr, qrVersionForBytes } from "./qr";
 import type { RxStats } from "./codec";
 import type { Transmitter } from "./codec";
+import { FPS_DEFAULT, RECEIVE_WEB_URL } from "./site";
 
 export function startBroadcast(opts: {
   tx: Transmitter;
   canvas: HTMLCanvasElement | null | (() => HTMLCanvasElement | null);
   payloadBytes: number;
   filename: string;
+  getTargetFps?: () => number;
+  handshakeUrl?: string;
   onStats: (patch: Partial<RxStats>) => void;
   onFrameBytes?: (bytes: Uint8Array) => void;
 }): { stop: () => void } {
-  const profile = probeDevice();
   const first = opts.tx.next();
   const version = qrVersionForBytes(bytesToB64(first.bytes).length);
+  const handshake = opts.handshakeUrl ?? RECEIVE_WEB_URL;
   let cancelled = false;
   let raf = 0;
   let last = 0;
   let frames = 0;
   let fpsWindow = performance.now();
   let ema = 12;
-  let frameMs = 1000 / profile.baseFps;
+  const cap = () => Math.max(8, opts.getTargetFps?.() ?? FPS_DEFAULT);
+  let frameMs = 1000 / cap();
   let pending = first.bytes;
+  let cycleAt = performance.now();
 
   opts.onStats({
     filename: opts.filename,
@@ -33,15 +38,17 @@ export function startBroadcast(opts: {
     bytesPerFrame: first.bytes.byteLength,
   });
 
-  const pump = (bytes: Uint8Array) => {
+  const canvasOf = () => (typeof opts.canvas === "function" ? opts.canvas() : opts.canvas);
+
+  const pumpFountain = (bytes: Uint8Array) => {
     const t0 = performance.now();
     const qr = encodeFrameQr(bytes, version);
-    const canvas = typeof opts.canvas === "function" ? opts.canvas() : opts.canvas;
+    const canvas = canvasOf();
     if (canvas) drawMatrix(canvas, qr.matrix);
     opts.onFrameBytes?.(bytes);
     const cost = performance.now() - t0;
     ema = ema * 0.8 + cost * 0.2;
-    const fps = fpsFromEncodeMs(ema, profile.baseFps);
+    const fps = fpsFromEncodeMs(ema, cap());
     frameMs = 1000 / fps;
     frames += 1;
     const now = performance.now();
@@ -61,15 +68,22 @@ export function startBroadcast(opts: {
     }
   };
 
-  pump(pending);
+  pumpFountain(pending);
   pending = opts.tx.next().bytes;
 
   const loop = (t: number) => {
     if (cancelled) return;
     if (t - last >= frameMs) {
       last = t;
-      pump(pending);
-      pending = opts.tx.next().bytes;
+      const elapsed = t - cycleAt;
+      const inHandshake = elapsed % 9000 < 1400;
+      const canvas = canvasOf();
+      if (inHandshake && canvas) {
+        drawUrlQr(canvas, handshake);
+      } else {
+        pumpFountain(pending);
+        pending = opts.tx.next().bytes;
+      }
     }
     raf = requestAnimationFrame(loop);
   };

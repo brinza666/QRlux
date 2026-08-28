@@ -42,9 +42,9 @@ const HEADER_CORE = 4 + 1 + 1 + 2 + 2 + 4 + 4 + 4 + 32 + 1 + NAME_MAX + 1 + MIME
 
 export function chooseBlockSize(payloadSize: number): number {
   const targetK =
-    payloadSize < 80_000 ? 28 : payloadSize < 400_000 ? 48 : payloadSize < 2_000_000 ? 80 : 120;
+    payloadSize < 80_000 ? 32 : payloadSize < 400_000 ? 64 : payloadSize < 2_000_000 ? 96 : 160;
   let bs = Math.ceil(payloadSize / targetK);
-  bs = Math.max(400, Math.min(1920, bs));
+  bs = Math.max(360, Math.min(720, bs));
   bs = Math.ceil(bs / 16) * 16;
   return bs;
 }

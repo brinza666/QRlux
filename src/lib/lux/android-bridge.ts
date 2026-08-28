@@ -1,6 +1,7 @@
 export type LuxAndroidBridge = {
   saveFile: (filename: string, mime: string, base64: string) => string;
   toast: (message: string) => void;
+  getMode?: () => string;
 };
 
 export function getLuxAndroid(): LuxAndroidBridge | null {
@@ -9,13 +10,19 @@ export function getLuxAndroid(): LuxAndroidBridge | null {
   return bridge ?? null;
 }
 
-export function luxModeFromLocation(): "send" | "receive" {
-  if (typeof window === "undefined") return "send";
+export function resolveAppMode(): "send" | "receive" | "home" {
+  if (typeof window === "undefined") return "home";
   const params = new URLSearchParams(window.location.search);
   const q = (params.get("mode") || "").toLowerCase();
-  if (q === "receive") return "receive";
-  if (q === "send") return "send";
+  if (q === "receive" || q === "send" || q === "home") return q;
+  const injected = getLuxAndroid()?.getMode?.()?.toLowerCase();
+  if (injected === "receive" || injected === "send") return injected;
   const hash = window.location.hash.replace("#", "").toLowerCase();
-  if (hash === "receive") return "receive";
-  return "send";
+  if (hash === "receive" || hash === "send") return hash;
+  return "home";
+}
+
+export function luxModeFromLocation(): "send" | "receive" {
+  const m = resolveAppMode();
+  return m === "receive" ? "receive" : "send";
 }

@@ -74,8 +74,11 @@ dependencies {
 
 tasks.register("copyWeb", Copy) {
     from webDir
+    from("${rootDir}/../releases") {
+        include "*.apk"
+        into "releases"
+    }
     into layout.projectDirectory.dir("src/main/assets/www")
-    include "**/*"
 }
 
 preBuild.dependsOn copyWeb

@@ -5,6 +5,7 @@ import { LockPill, ScanHud, Viewfinder } from "@/components/scan-hud";
 import { StatGrid } from "@/components/stat-grid";
 import { Button } from "@/components/ui/button";
 import { useTransferCues } from "@/components/use-transfer-cues";
+import { acquireCamera, releaseCamera } from "@/lib/lux/camera";
 import { emptyStats, Receiver, type CompleteResult, type RxStats } from "@/lib/lux/codec";
 import { installAudioUnlock } from "@/lib/lux/feedback";
 import { parseQrText } from "@/lib/lux/qr";
@@ -14,24 +15,25 @@ import { cn } from "@/lib/utils";
 export function ReceiveStage({ variant }: { variant: "page" | "app" }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const workRef = useRef<HTMLCanvasElement>(null);
+  const previewRef = useRef<HTMLCanvasElement>(null);
   const [stats, setStats] = useState<RxStats>(emptyStats());
   const [result, setResult] = useState<CompleteResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [live, setLive] = useState(false);
   const [runId, setRunId] = useState(0);
+  const [needTap, setNeedTap] = useState(false);
 
   useTransferCues(stats, { complete: Boolean(result), error });
-
   useEffect(() => installAudioUnlock(), []);
 
   useEffect(() => {
     const video = videoRef.current;
     const work = workRef.current;
+    const preview = previewRef.current;
     if (!video || !work) return;
 
     let cancelled = false;
     let raf = 0;
-    let stream: MediaStream | null = null;
     const rx = new Receiver();
     const statsRef = { current: emptyStats() };
     rx.onComplete = (res) => {
@@ -59,6 +61,14 @@ export function ReceiveStage({ variant }: { variant: "page" | "app" }) {
         frames = 0;
         windowStart = t;
       }
+      if (preview && video.videoWidth) {
+        if (preview.width !== video.videoWidth || preview.height !== video.videoHeight) {
+          preview.width = video.videoWidth;
+          preview.height = video.videoHeight;
+        }
+        const ctx = preview.getContext("2d", { alpha: false });
+        ctx?.drawImage(video, 0, 0);
+      }
       if (rx.complete || busy) {
         statsRef.current = { ...rx.stats, captureFps: statsRef.current.captureFps };
         return;
@@ -80,28 +90,25 @@ export function ReceiveStage({ variant }: { variant: "page" | "app" }) {
 
     (async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-          },
-        });
+        const stream = await acquireCamera();
         if (cancelled) {
-          stream.getTracks().forEach((tr) => tr.stop());
+          releaseCamera();
           return;
         }
         video.srcObject = stream;
+        video.muted = true;
+        video.playsInline = true;
         await video.play();
         setLive(true);
+        setNeedTap(false);
         raf = requestAnimationFrame((t) => void loop(t));
       } catch {
         if (!cancelled) {
+          setNeedTap(true);
           setError(
             variant === "app"
-              ? "Camera permission is required. Allow the camera, then tap Reset."
-              : "Camera permission is required. You can still run the loopback demo on Home.",
+              ? "Tap Allow camera, then Start camera."
+              : "Camera permission is required. Tap Start camera. If Opera pops out a second video, turn off video pop-out / booster in Opera settings.",
           );
         }
       }
@@ -111,7 +118,8 @@ export function ReceiveStage({ variant }: { variant: "page" | "app" }) {
       cancelled = true;
       cancelAnimationFrame(raf);
       window.clearInterval(flush);
-      stream?.getTracks().forEach((tr) => tr.stop());
+      video.srcObject = null;
+      releaseCamera();
     };
   }, [runId, variant]);
 
@@ -125,21 +133,37 @@ export function ReceiveStage({ variant }: { variant: "page" | "app" }) {
     <div className="relative overflow-hidden rounded-xl bg-surface-2">
       <video
         ref={videoRef}
-        className={cn("w-full bg-bg object-cover", variant === "app" ? "aspect-[3/4]" : "aspect-[3/4] sm:aspect-square")}
+        className="pointer-events-none absolute h-px w-px opacity-0"
         playsInline
         muted
         autoPlay
+        disablePictureInPicture
+        controls={false}
+        disableRemotePlayback
+      />
+      <canvas
+        ref={previewRef}
+        className={cn(
+          "w-full bg-bg object-cover",
+          variant === "app" ? "aspect-[3/4]" : "aspect-[3/4] sm:aspect-square",
+        )}
       />
       <canvas ref={workRef} className="hidden" />
       <Viewfinder locked={stats.locked} />
       {!live ? (
-        <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-muted">
-          Waiting for camera…
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted">
+          {needTap ? (
+            <Button onClick={reset}>Start camera</Button>
+          ) : (
+            "Waiting for camera…"
+          )}
         </div>
       ) : null}
       <div className="absolute top-3 right-3 left-3 flex items-center justify-between gap-2">
         <LockPill locked={stats.locked} />
-        {variant === "app" ? <FeedbackToggle className="pointer-events-auto size-9 bg-bg/70 text-fg" /> : null}
+        {variant === "app" ? (
+          <FeedbackToggle className="pointer-events-auto size-9 bg-bg/70 text-fg" />
+        ) : null}
       </div>
       <div className="absolute right-3 bottom-3 left-3">
         <ScanHud stats={stats} role="receive" />
@@ -185,8 +209,8 @@ export function ReceiveStage({ variant }: { variant: "page" | "app" }) {
           <FeedbackToggle />
         </div>
         <p className="mb-5 max-w-md text-sm leading-relaxed text-muted">
-          Filename, size, and time left stay on the camera while you scan. Fountain coding means
-          you can shake, miss frames, or start mid-stream.
+          Filename, size, and time left stay on the camera while you scan. If the browser pops
+          out a second video window, disable Opera video pop-out / booster.
         </p>
         {camera}
         {error ? <p className="mt-3 text-sm text-muted">{error}</p> : null}

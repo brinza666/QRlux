@@ -16,15 +16,15 @@ export function QrPlate({
     <div
       className={cn(
         "overflow-hidden rounded-xl bg-paper",
-        size === "hero" ? "p-2 sm:p-3" : "p-3 sm:p-4",
+        size === "hero" ? "p-1.5 sm:p-2" : "p-3 sm:p-4",
         className,
       )}
     >
       <canvas
         ref={canvasRef}
         className={cn(
-          "aspect-square w-full [image-rendering:pixelated]",
-          size === "hero" && "max-h-[min(92dvh,100vw)]",
+          "aspect-square w-full bg-paper [image-rendering:pixelated]",
+          size === "hero" && "max-h-[min(88dvh,100vw)]",
         )}
         aria-label="Fountain QR stream"
       />

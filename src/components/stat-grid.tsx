@@ -43,10 +43,22 @@ export function StatGrid({ stats, role = "receive" }: { stats: RxStats; role?: "
       />
       <Cell
         label="Pieces"
-        value={stats.k ? `${stats.recovered} / ${stats.k}` : "—"}
+        value={
+          role === "send"
+            ? stats.k
+              ? `${stats.k} looping`
+              : "—"
+            : stats.k
+              ? `${stats.recovered} / ${stats.k}`
+              : "—"
+        }
         accent={stats.locked}
       />
-      <Cell label="Time left" value={time} accent={Boolean(p.etaSec && p.pct < 1)} />
+      <Cell
+        label={role === "send" ? "On screen" : "Time left"}
+        value={role === "send" ? (fps ? `${fps.toFixed(0)} fps` : "—") : time}
+        accent={role !== "send" && Boolean(p.etaSec && p.pct < 1)}
+      />
       <Cell label="Camera" value={fps ? `${fps.toFixed(0)} fps` : "—"} />
       <Cell
         label="Speed"

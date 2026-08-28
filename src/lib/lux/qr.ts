@@ -43,34 +43,58 @@ export function encodeFrameQr(bytes: Uint8Array, pinnedVersion?: number): QrFram
     ecc: "L",
     minVersion: version,
     maxVersion: 40,
-    border: 2,
+    border: 4,
     boostEcc: false,
   });
   return { matrix: result.data, size: result.size, version: result.version, text };
 }
 
+let scratch: HTMLCanvasElement | null = null;
+
 export function drawMatrix(canvas: HTMLCanvasElement, matrix: boolean[][]): void {
   const size = matrix.length;
-  if (canvas.width !== size || canvas.height !== size) {
-    canvas.width = size;
-    canvas.height = size;
+  if (!scratch) scratch = document.createElement("canvas");
+  if (scratch.width !== size || scratch.height !== size) {
+    scratch.width = size;
+    scratch.height = size;
   }
-  const ctx = canvas.getContext("2d", { alpha: false });
-  if (!ctx) return;
-  const img = ctx.createImageData(size, size);
+  const sctx = scratch.getContext("2d", { alpha: false });
+  if (!sctx) return;
+  const img = sctx.createImageData(size, size);
   const buf = img.data;
   for (let y = 0; y < size; y++) {
     const row = matrix[y]!;
     for (let x = 0; x < size; x++) {
       const i = (y * size + x) * 4;
-      const v = row[x] ? 0 : 247;
+      const v = row[x] ? 10 : 244;
       buf[i] = v;
       buf[i + 1] = v;
       buf[i + 2] = v;
       buf[i + 3] = 255;
     }
   }
-  ctx.putImageData(img, 0, 0);
+  sctx.putImageData(img, 0, 0);
+  const scale = Math.max(2, Math.min(6, Math.floor(720 / Math.max(size, 1))));
+  const px = size * scale;
+  if (canvas.width !== px || canvas.height !== px) {
+    canvas.width = px;
+    canvas.height = px;
+  }
+  const ctx = canvas.getContext("2d", { alpha: false });
+  if (!ctx) return;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(scratch, 0, 0, px, px);
+}
+
+export function drawUrlQr(canvas: HTMLCanvasElement, url: string): void {
+  const result = encode(url, {
+    ecc: "M",
+    minVersion: 4,
+    maxVersion: 12,
+    border: 4,
+    boostEcc: false,
+  });
+  drawMatrix(canvas, result.data);
 }
 
 export function parseQrText(text: string): Uint8Array | null {

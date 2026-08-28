@@ -13,6 +13,39 @@ export function getBarcodeDetector(): Detector | null {
   }
 }
 
+let liveStream: MediaStream | null = null;
+
+export function stopCameraStream(): void {
+  liveStream?.getTracks().forEach((t) => t.stop());
+  liveStream = null;
+}
+
+export async function openCamera(): Promise<MediaStream> {
+  stopCameraStream();
+  const constraints: MediaStreamConstraints[] = [
+    {
+      audio: false,
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
+    },
+    { audio: false, video: { facingMode: "environment" } },
+    { audio: false, video: true },
+  ];
+  let last: unknown;
+  for (const c of constraints) {
+    try {
+      liveStream = await navigator.mediaDevices.getUserMedia(c);
+      return liveStream;
+    } catch (err) {
+      last = err;
+    }
+  }
+  throw last instanceof Error ? last : new Error("Camera unavailable");
+}
+
 /** One decoder at a time. Prefer BarcodeDetector; switch to jsQR only if it never locks. */
 export function createScanner(video: HTMLVideoElement, work: HTMLCanvasElement) {
   const detector = getBarcodeDetector();

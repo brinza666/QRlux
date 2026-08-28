@@ -102,14 +102,18 @@ public class MainActivity extends Activity {
             }
         });
 
+        loadApp();
+
         if ("receive".equals(BuildConfig.LUX_MODE)) {
             if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{Manifest.permission.CAMERA}, PERMS);
             }
         }
+    }
 
-        String url = "file:///android_asset/www/index.html";
-        webView.loadUrl(url);
+    private void loadApp() {
+        String mode = BuildConfig.LUX_MODE == null ? "send" : BuildConfig.LUX_MODE;
+        webView.loadUrl("file:///android_asset/www/index.html?mode=" + mode);
     }
 
     @Override
@@ -136,6 +140,10 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMS) {
+            loadApp();
+            return;
+        }
         if (webView != null) {
             webView.reload();
         }
@@ -150,6 +158,11 @@ public class MainActivity extends Activity {
     }
 
     public class LuxBridge {
+        @JavascriptInterface
+        public String getMode() {
+            return BuildConfig.LUX_MODE;
+        }
+
         @JavascriptInterface
         public void toast(String message) {
             runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
