@@ -39,8 +39,8 @@ function AndroidPage() {
               at the computer. No app install needed yet.
             </li>
             <li>
-              When transfer completes the browser downloads <span className="font-mono text-fg">lux-receive.apk</span>.
-              Open that file later to install.
+              When transfer completes, tap Download once for that APK. Do not start both
+              Send and Receive samples at the same time.
             </li>
           </ol>
           <div className="mt-5 flex flex-wrap gap-2">

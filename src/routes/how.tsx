@@ -73,10 +73,10 @@ function HowPage() {
           <p>
             Native phone-to-phone tests of this technique have published around 140–200 KB/s, with
             desktop-to-phone peaks several times higher when the panel is a large, bright 60–120 Hz
-            display and the QR is version 40 (~2953 bytes/frame). This web build uses a smaller QR
-            so generation and decode stay smooth in a browser. Same-screen loopback is instant and
-            honest about the codec. Two-device camera receive depends on focus, lighting, and how
-            hard the phone will work on jsQR.
+            display and the QR is version 40 (~2953 bytes/frame). This web build now measures the
+            machine and fills the window with the QR so a phone camera can lock without zooming.
+            Files up to 16 MB. Same-screen loopback is instant. Two-device receive uses one decoder
+            at a time (BarcodeDetector, or jsQR if that never locks).
           </p>
           <p>
             There is no encryption. Anyone who can see the screen can capture the file. Treat it

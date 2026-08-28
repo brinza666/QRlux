@@ -30,15 +30,16 @@ function SendPage() {
   return (
     <div className="min-h-dvh bg-bg text-fg">
       <SiteHeader />
-      <main className="mx-auto w-full max-w-6xl px-4 pb-20 sm:px-6">
+      <main className="mx-auto w-full max-w-[1100px] px-4 pb-20 sm:px-6">
         <div className="pt-4 pb-8 sm:pt-8">
           <p className="font-mono text-[0.7rem] tracking-[0.22em] text-subtle uppercase">
             Transmitter
           </p>
           <h1 className="mt-3 text-3xl font-medium tracking-tight sm:text-4xl">Broadcast a file</h1>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted">
-            The screen becomes the radio. Pick a built-in APK sample to beam the installer to a
-            phone browser, or send any file under 512 KB. Keep this page in the foreground.
+            The screen becomes the radio. Pick any file up to 16 MB. This page measures the
+            computer first and runs as many frames as it can hold — the QR fills the window so
+            a phone does not need to zoom. Keep the tab in the foreground.
           </p>
         </div>
         <TransferStage mode="send" initialSample={initialSample} />

@@ -9,8 +9,9 @@ import {
 export const MAGIC = new Uint8Array([0x4c, 0x55, 0x58, 0x01]); // LUX\x01
 export const TYPE_HEADER = 1;
 export const TYPE_SYMBOL = 2;
-export const MAX_FILE_BYTES = 512 * 1024;
+export const MAX_FILE_BYTES = 16 * 1024 * 1024;
 export const HEADER_PERIOD = 6;
+export const MAX_K = 24_000;
 
 export type FilePayload = {
   filename: string;
@@ -40,9 +41,10 @@ const MIME_MAX = 40;
 const HEADER_CORE = 4 + 1 + 1 + 2 + 2 + 4 + 4 + 4 + 32 + 1 + NAME_MAX + 1 + MIME_MAX;
 
 export function chooseBlockSize(payloadSize: number): number {
-  const targetK = 28;
+  const targetK =
+    payloadSize < 80_000 ? 28 : payloadSize < 400_000 ? 48 : payloadSize < 2_000_000 ? 80 : 120;
   let bs = Math.ceil(payloadSize / targetK);
-  bs = Math.max(360, Math.min(720, bs));
+  bs = Math.max(400, Math.min(1920, bs));
   bs = Math.ceil(bs / 16) * 16;
   return bs;
 }
@@ -110,7 +112,7 @@ export function unpackFrame(buf: Uint8Array): Unpacked | null {
     const sha256 = buf.subarray(22, 54).slice();
     const filename = readUtf8Padded(buf, 54, NAME_MAX);
     const mime = readUtf8Padded(buf, 54 + 1 + NAME_MAX, MIME_MAX);
-    if (k < 1 || k > 8000 || blockSize < 16) return null;
+    if (k < 1 || k > MAX_K || blockSize < 16 || blockSize > 4096) return null;
     return {
       kind: "header",
       header: {
@@ -191,7 +193,7 @@ export class Transmitter {
 
   static async fromFile(file: FilePayload): Promise<Transmitter> {
     if (file.bytes.byteLength > MAX_FILE_BYTES) {
-      throw new Error(`File is over the ${MAX_FILE_BYTES / 1024} KB limit for this demo.`);
+      throw new Error(`File is over the ${Math.round(MAX_FILE_BYTES / (1024 * 1024))} MB limit.`);
     }
     const hash = await sha256(file.bytes);
     const { data: payload, gzip } = await maybeGzip(file.bytes);
@@ -344,6 +346,7 @@ export class Receiver {
     this.stats.blockLen = header.blockSize;
     this.stats.session = (header.session >>> 0).toString(16).padStart(8, "0").slice(-4);
     this.stats.filename = header.filename;
+    this.stats.payloadBytes = header.origSize;
     this.onHeader?.(header);
     const queued = this.early;
     this.early = [];
@@ -368,10 +371,9 @@ export class Receiver {
     if (helped || dec.recovered > before) this.stats.framesNew += 1;
     else this.stats.framesRed += 1;
     this.stats.recovered = dec.recovered;
-    this.stats.payloadBytes = dec.recovered * header.blockSize;
     const elapsed = Math.max(0.001, (now - this.startedAt) / 1000);
     this.stats.elapsedSec = elapsed;
-    this.stats.goodputKBs = this.stats.payloadBytes / 1024 / elapsed;
+    this.stats.goodputKBs = (dec.recovered * header.blockSize) / 1024 / elapsed;
     if (dec.done && !this.complete) void this.finish(now);
   }
 

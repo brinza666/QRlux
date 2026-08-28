@@ -13,29 +13,44 @@ export function getBarcodeDetector(): Detector | null {
   }
 }
 
-export async function readQrFromVideo(
-  video: HTMLVideoElement,
-  work: HTMLCanvasElement,
-  detector: Detector | null,
-): Promise<string | null> {
-  if (detector) {
-    try {
-      const codes = await detector.detect(video);
-      if (codes[0]?.rawValue) return codes[0].rawValue;
-    } catch {
-      /* jsQR fallback */
-    }
-  }
-  const ctx = work.getContext("2d", { willReadFrequently: true });
-  if (!ctx || !video.videoWidth) return null;
-  const w = Math.min(720, video.videoWidth);
-  const h = Math.round((video.videoHeight * w) / video.videoWidth);
-  if (work.width !== w || work.height !== h) {
-    work.width = w;
-    work.height = h;
-  }
-  ctx.drawImage(video, 0, 0, w, h);
-  const img = ctx.getImageData(0, 0, w, h);
-  const code = jsQR(img.data, w, h, { inversionAttempts: "dontInvert" });
-  return code?.data ?? null;
+/** One decoder at a time. Prefer BarcodeDetector; switch to jsQR only if it never locks. */
+export function createScanner(video: HTMLVideoElement, work: HTMLCanvasElement) {
+  const detector = getBarcodeDetector();
+  let engine: "bd" | "jsqr" = detector ? "bd" : "jsqr";
+  const started = performance.now();
+  let lastHit = 0;
+
+  return {
+    engine: () => engine,
+    async read(locked: boolean): Promise<string | null> {
+      if (engine === "bd" && detector) {
+        try {
+          const codes = await detector.detect(video);
+          const value = codes[0]?.rawValue ?? null;
+          if (value) {
+            lastHit = performance.now();
+            return value;
+          }
+        } catch {
+          /* stay on BD until the grace window ends */
+        }
+        if (!locked && performance.now() - started > 2500) engine = "jsqr";
+        else return null;
+      }
+      const ctx = work.getContext("2d", { willReadFrequently: true });
+      if (!ctx || !video.videoWidth) return null;
+      const w = Math.min(800, video.videoWidth);
+      const h = Math.round((video.videoHeight * w) / video.videoWidth);
+      if (work.width !== w || work.height !== h) {
+        work.width = w;
+        work.height = h;
+      }
+      ctx.drawImage(video, 0, 0, w, h);
+      const img = ctx.getImageData(0, 0, w, h);
+      const code = jsQR(img.data, w, h, { inversionAttempts: "dontInvert" });
+      if (code?.data) lastHit = performance.now();
+      return code?.data ?? null;
+    },
+    lastHit: () => lastHit,
+  };
 }

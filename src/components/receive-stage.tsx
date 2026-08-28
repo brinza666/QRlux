@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import jsQR from "jsqr";
 import { CompleteCard } from "@/components/complete-card";
 import { FeedbackToggle } from "@/components/feedback-toggle";
 import { LockPill, ScanHud, Viewfinder } from "@/components/scan-hud";
@@ -9,20 +8,8 @@ import { useTransferCues } from "@/components/use-transfer-cues";
 import { emptyStats, Receiver, type CompleteResult, type RxStats } from "@/lib/lux/codec";
 import { installAudioUnlock } from "@/lib/lux/feedback";
 import { parseQrText } from "@/lib/lux/qr";
+import { createScanner } from "@/lib/lux/scan";
 import { cn } from "@/lib/utils";
-
-type Detector = { detect: (src: ImageBitmapSource) => Promise<{ rawValue: string }[]> };
-
-function getBarcodeDetector(): Detector | null {
-  const Ctor = (window as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => Detector })
-    .BarcodeDetector;
-  if (!Ctor) return null;
-  try {
-    return new Ctor({ formats: ["qr_code"] });
-  } catch {
-    return null;
-  }
-}
 
 export function ReceiveStage({ variant }: { variant: "page" | "app" }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -58,33 +45,10 @@ export function ReceiveStage({ variant }: { variant: "page" | "app" }) {
       if (!cancelled) setStats({ ...statsRef.current });
     }, 100);
 
-    const detector = getBarcodeDetector();
+    const scanner = createScanner(video, work);
     let frames = 0;
     let windowStart = performance.now();
-    let lastScan = 0;
-
-    async function readQr(): Promise<string | null> {
-      if (detector) {
-        try {
-          const codes = await detector.detect(video!);
-          if (codes[0]?.rawValue) return codes[0].rawValue;
-        } catch {
-          /* jsQR fallback */
-        }
-      }
-      const ctx = work!.getContext("2d", { willReadFrequently: true });
-      if (!ctx || !video!.videoWidth) return null;
-      const w = Math.min(720, video!.videoWidth);
-      const h = Math.round((video!.videoHeight * w) / video!.videoWidth);
-      if (work!.width !== w || work!.height !== h) {
-        work!.width = w;
-        work!.height = h;
-      }
-      ctx.drawImage(video!, 0, 0, w, h);
-      const img = ctx.getImageData(0, 0, w, h);
-      const code = jsQR(img.data, w, h, { inversionAttempts: "dontInvert" });
-      return code?.data ?? null;
-    }
+    let busy = false;
 
     const loop = async (t: number) => {
       if (cancelled) return;
@@ -95,19 +59,23 @@ export function ReceiveStage({ variant }: { variant: "page" | "app" }) {
         frames = 0;
         windowStart = t;
       }
-      if (rx.complete || t - lastScan < 45) {
+      if (rx.complete || busy) {
         statsRef.current = { ...rx.stats, captureFps: statsRef.current.captureFps };
         return;
       }
-      lastScan = t;
-      const text = await readQr();
-      if (cancelled || rx.complete) return;
+      busy = true;
+      const text = await scanner.read(rx.stats.locked);
+      if (cancelled || rx.complete) {
+        busy = false;
+        return;
+      }
       if (text) {
         const bytes = parseQrText(text);
         if (bytes) rx.push(bytes, t);
         else rx.stats.dropped += 1;
       }
       statsRef.current = { ...rx.stats, captureFps: statsRef.current.captureFps };
+      busy = false;
     };
 
     (async () => {
@@ -116,8 +84,8 @@ export function ReceiveStage({ variant }: { variant: "page" | "app" }) {
           audio: false,
           video: {
             facingMode: { ideal: "environment" },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
           },
         });
         if (cancelled) {

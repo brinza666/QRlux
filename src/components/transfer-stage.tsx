@@ -5,6 +5,7 @@ import { ScanHud } from "@/components/scan-hud";
 import { StatGrid } from "@/components/stat-grid";
 import { Button } from "@/components/ui/button";
 import { useTransferCues } from "@/components/use-transfer-cues";
+import { startBroadcast } from "@/lib/lux/broadcast";
 import {
   emptyStats,
   MAX_FILE_BYTES,
@@ -14,13 +15,10 @@ import {
   type FilePayload,
   type RxStats,
 } from "@/lib/lux/codec";
-import { bytesToB64, drawMatrix, encodeFrameQr, qrVersionForBytes } from "@/lib/lux/qr";
+import { probeDevice } from "@/lib/lux/device";
+import { playCue, installAudioUnlock } from "@/lib/lux/feedback";
 import { fileFromBlob, loadApkSample, makeNote, makeWindowLight } from "@/lib/lux/samples";
 import { formatBytes } from "@/lib/utils";
-import { playCue, installAudioUnlock } from "@/lib/lux/feedback";
-
-const TARGET_FPS = 30;
-const APK_FPS = 12;
 
 type SampleId = "photo" | "note" | "file" | "apk-send" | "apk-receive";
 
@@ -35,7 +33,9 @@ export function TransferStage({
   const [stats, setStats] = useState<RxStats>(emptyStats());
   const [result, setResult] = useState<CompleteResult | null>(null);
   const [status, setStatus] = useState(
-    mode === "demo" ? "Preparing sample…" : "Choose a file or a built-in sample to start broadcasting.",
+    mode === "demo"
+      ? "Preparing sample…"
+      : "Pick a file. The QR will fill the screen so a phone can lock on.",
   );
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -45,11 +45,15 @@ export function TransferStage({
   const [armed, setArmed] = useState(
     mode === "demo" || Boolean(initialSample && initialSample !== "file"),
   );
+  const [deviceLabel, setDeviceLabel] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const statsTimer = useRef<number>(0);
 
   useTransferCues(stats, { complete: Boolean(result), error });
   useEffect(() => installAudioUnlock(), []);
+  useEffect(() => {
+    setDeviceLabel(probeDevice().label);
+  }, []);
 
   const loadPayload = useCallback(async (): Promise<FilePayload> => {
     if (picked) return picked;
@@ -61,13 +65,13 @@ export function TransferStage({
 
   useEffect(() => {
     if (!armed) {
-      setStatus("Choose a file or a built-in sample to start broadcasting.");
+      setStatus("Pick a file. The QR will fill the screen so a phone can lock on.");
       setRunning(false);
       return;
     }
 
     let cancelled = false;
-    let raf = 0;
+    let stopBroadcast: (() => void) | null = null;
     const rx = mode === "demo" ? new Receiver() : null;
     const statsRef = { current: emptyStats() };
 
@@ -77,6 +81,7 @@ export function TransferStage({
         setResult(res);
         statsRef.current.complete = true;
         setStats({ ...statsRef.current });
+        stopBroadcast?.();
       };
     }
 
@@ -93,72 +98,37 @@ export function TransferStage({
         if (cancelled) return;
         const tx = await Transmitter.fromFile(payload);
         if (cancelled) return;
-        const first = tx.next();
-        const version = qrVersionForBytes(bytesToB64(first.bytes).length);
         setRunning(true);
         playCue("start");
         setStatus(
-          `${payload.filename} · ${formatBytes(payload.bytes.byteLength)} · ${tx.header.k} blocks`,
+          `${payload.filename} · ${formatBytes(payload.bytes.byteLength)} · ${tx.header.k} pieces`,
         );
 
-        let last = 0;
-        let frames = 0;
-        let fpsWindow = performance.now();
-        const apk = sample === "apk-send" || sample === "apk-receive";
-        const frameMs = 1000 / (apk ? APK_FPS : TARGET_FPS);
-
-        const pump = (bytes: Uint8Array) => {
-          const qr = encodeFrameQr(bytes, version);
-          const canvas = canvasRef.current;
-          if (canvas) drawMatrix(canvas, qr.matrix);
-          if (rx) rx.push(bytes);
-          frames += 1;
-          const now = performance.now();
-          if (now - fpsWindow >= 400) {
-            const fps = (frames / (now - fpsWindow)) * 1000;
-            statsRef.current.txFps = fps;
-            statsRef.current.captureFps = fps;
+        const handle = startBroadcast({
+          tx,
+          canvas: () => canvasRef.current,
+          payloadBytes: payload.bytes.byteLength,
+          filename: payload.filename,
+          onStats(patch) {
             if (rx) {
-              rx.stats.txFps = fps;
-              rx.stats.captureFps = fps;
-              rx.stats.bytesPerFrame = bytes.byteLength;
-              statsRef.current = { ...rx.stats, txFps: fps, captureFps: fps };
+              Object.assign(rx.stats, patch);
+              statsRef.current = { ...rx.stats };
             } else {
-              statsRef.current = {
-                ...statsRef.current,
-                txFps: fps,
-                captureFps: fps,
-                bytesPerFrame: bytes.byteLength,
-                blockLen: tx.header.blockSize,
-                k: tx.header.k,
-                session: (tx.header.session >>> 0).toString(16).padStart(8, "0").slice(-4),
-                filename: tx.header.filename,
-                locked: true,
-                payloadBytes: payload.bytes.byteLength,
-              };
+              statsRef.current = { ...statsRef.current, ...patch };
             }
-            frames = 0;
-            fpsWindow = now;
-          } else if (rx) {
-            statsRef.current = {
-              ...rx.stats,
-              txFps: statsRef.current.txFps,
-              captureFps: statsRef.current.captureFps,
-            };
-          }
-        };
-
-        pump(first.bytes);
-
-        const loop = (t: number) => {
-          if (cancelled || rx?.complete || rx?.decoder?.done) return;
-          if (t - last >= frameMs) {
-            last = t;
-            pump(tx.next().bytes);
-          }
-          if (!cancelled && !rx?.complete && !rx?.decoder?.done) raf = requestAnimationFrame(loop);
-        };
-        raf = requestAnimationFrame(loop);
+          },
+          onFrameBytes: rx
+            ? (bytes) => {
+                rx.push(bytes);
+                statsRef.current = {
+                  ...rx.stats,
+                  txFps: statsRef.current.txFps,
+                  captureFps: statsRef.current.captureFps,
+                };
+              }
+            : undefined,
+        });
+        stopBroadcast = handle.stop;
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Failed to start transfer");
@@ -168,7 +138,7 @@ export function TransferStage({
 
     return () => {
       cancelled = true;
-      cancelAnimationFrame(raf);
+      stopBroadcast?.();
       window.clearInterval(statsTimer.current);
     };
   }, [mode, runId, loadPayload, armed]);
@@ -177,7 +147,7 @@ export function TransferStage({
     const file = list?.[0];
     if (!file) return;
     if (file.size > MAX_FILE_BYTES) {
-      setError(`Keep files under ${MAX_FILE_BYTES / 1024} KB for this demo.`);
+      setError(`Keep files under ${formatBytes(MAX_FILE_BYTES)}.`);
       return;
     }
     const payload = await fileFromBlob(file);
@@ -194,6 +164,8 @@ export function TransferStage({
     setRunId((n) => n + 1);
   }
 
+  const sendLayout = mode === "send";
+
   return (
     <div className="flex flex-col gap-6">
       {result ? (
@@ -206,18 +178,26 @@ export function TransferStage({
         />
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
+      <div
+        className={
+          sendLayout
+            ? "flex flex-col gap-5"
+            : "grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start"
+        }
+      >
         <div>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="font-mono text-[0.65rem] tracking-[0.16em] text-subtle uppercase">
+            <p className="font-mono text-xs tracking-[0.16em] text-subtle uppercase">
               LUX — Optical file transfer
             </p>
-            <p className="font-mono text-[0.65rem] text-muted">
-              {stats.txFps ? `${stats.txFps.toFixed(0)} FPS` : "—"} ·{" "}
-              {stats.bytesPerFrame ? `${stats.bytesPerFrame} B/frame` : "—"}
+            <p className="font-mono text-xs text-muted">
+              {deviceLabel || "…"}
+              {stats.txFps ? ` · ${stats.txFps.toFixed(0)} fps` : ""}
             </p>
           </div>
-          <QrPlate canvasRef={canvasRef} />
+          <div className={sendLayout ? "mx-auto w-full max-w-[min(92vmin,920px)]" : undefined}>
+            <QrPlate canvasRef={canvasRef} size={sendLayout ? "hero" : "default"} />
+          </div>
           <div className="mt-3">
             <ScanHud stats={stats} role={mode === "demo" ? "demo" : "send"} />
           </div>
@@ -235,6 +215,13 @@ export function TransferStage({
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
+                variant={picked ? "default" : "outline"}
+                onClick={() => inputRef.current?.click()}
+              >
+                {picked ? picked.filename : "Your file"}
+              </Button>
+              <Button
+                size="sm"
                 variant={sample === "photo" && !picked ? "default" : "outline"}
                 onClick={() => startSample("photo")}
               >
@@ -247,27 +234,6 @@ export function TransferStage({
               >
                 Plain note
               </Button>
-              <Button
-                size="sm"
-                variant={sample === "apk-send" && !picked ? "default" : "outline"}
-                onClick={() => startSample("apk-send")}
-              >
-                Send APK
-              </Button>
-              <Button
-                size="sm"
-                variant={sample === "apk-receive" && !picked ? "default" : "outline"}
-                onClick={() => startSample("apk-receive")}
-              >
-                Receive APK
-              </Button>
-              <Button
-                size="sm"
-                variant={picked ? "default" : "outline"}
-                onClick={() => inputRef.current?.click()}
-              >
-                {picked ? picked.filename : "Your file"}
-              </Button>
               <input
                 ref={inputRef}
                 type="file"
@@ -275,11 +241,16 @@ export function TransferStage({
                 onChange={(e) => void onPick(e.target.files)}
               />
             </div>
+            {mode === "send" ? (
+              <p className="text-xs text-muted">
+                Up to {formatBytes(MAX_FILE_BYTES)}. Speed is measured on this machine and
+                the QR stays large so the phone does not need to zoom.
+              </p>
+            ) : null}
             {running && mode === "send" ? (
               <p className="text-xs text-muted">
-                {sample === "apk-send" || sample === "apk-receive"
-                  ? "On the phone open Receive in the browser, hold still, then Download the APK when it completes."
-                  : "Point another device at this screen and open Receive. The stream loops until you leave the page."}
+                Keep this tab in the foreground. Open Receive on the phone and fill the
+                viewfinder with the plate.
               </p>
             ) : null}
           </div>

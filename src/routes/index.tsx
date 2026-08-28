@@ -93,31 +93,22 @@ function Home() {
         </section>
 
         <section className="rounded-xl border border-border bg-surface p-6 sm:p-8">
-          <p className="font-mono text-[0.65rem] tracking-[0.16em] text-subtle uppercase">
-            Get the Android apps
+          <p className="font-mono text-xs tracking-[0.16em] text-subtle uppercase">
+            Android
           </p>
           <h2 className="mt-3 text-xl font-medium tracking-tight">
-            Beam an APK from this PC to a phone browser
+            Two small installers — download one at a time
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
-            Both installers are pre-loaded (~142 KB). Broadcast from Send, catch them on Receive
-            in the phone’s browser, download, install later. Or grab the files directly.
+            Receive on the phone that will catch files. Send on the phone that will broadcast.
+            Direct download is on the Android page — one APK per tap.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <Button asChild>
-              <Link to="/send" search={{ payload: "receive-apk" }}>
-                Beam Receive APK
-              </Link>
+              <Link to="/android">Download APKs</Link>
             </Button>
             <Button asChild variant="outline">
-              <Link to="/send" search={{ payload: "send-apk" }}>
-                Beam Send APK
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/android">
-                Direct download
-              </Link>
+              <Link to="/send">Send a file</Link>
             </Button>
           </div>
         </section>

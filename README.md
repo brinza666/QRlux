@@ -44,7 +44,7 @@ There is **no encryption**. Anyone who can see the screen can capture the file. 
 | Want | File |
 | --- | --- |
 | Soliton / systematic mix / peeler | [`src/lib/lux/fountain.ts`](src/lib/lux/fountain.ts) |
-| Frame format, gzip, hash, 512 KB cap | [`src/lib/lux/codec.ts`](src/lib/lux/codec.ts) |
+| Frame format, gzip, hash, 16 MB cap | [`src/lib/lux/codec.ts`](src/lib/lux/codec.ts) |
 | QR version, ECC, canvas draw | [`src/lib/lux/qr.ts`](src/lib/lux/qr.ts) |
 | Built-in sample payloads | [`src/lib/lux/samples.ts`](src/lib/lux/samples.ts) |
 | Stream FPS, demo / send UI | [`src/components/transfer-stage.tsx`](src/components/transfer-stage.tsx) |
@@ -54,10 +54,10 @@ There is **no encryption**. Anyone who can see the screen can capture the file. 
 
 Useful knobs:
 
-- `TARGET_FPS` in `transfer-stage.tsx` — raise for brighter panels, lower if a phone overheats.
+- FPS is measured on the machine (`src/lib/lux/device.ts`) and adapted while encoding.
 - `chooseBlockSize()` / `HEADER_PERIOD` in `codec.ts` — denser frames vs. easier camera lock.
 - `symbolNeighbors()` in `fountain.ts` — currently even ESIs are systematic, then LT, then cycling degree-1. Swap this if you want a pure rateless stream.
-- `MAX_FILE_BYTES` — default 512 KB so a browser tab stays honest.
+- `MAX_FILE_BYTES` — 16 MB on both send and receive.
 
 ## Frame layout
 

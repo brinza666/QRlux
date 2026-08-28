@@ -5,6 +5,7 @@ import { ScanHud } from "@/components/scan-hud";
 import { StatGrid } from "@/components/stat-grid";
 import { Button } from "@/components/ui/button";
 import { useTransferCues } from "@/components/use-transfer-cues";
+import { startBroadcast } from "@/lib/lux/broadcast";
 import {
   emptyStats,
   MAX_FILE_BYTES,
@@ -12,13 +13,10 @@ import {
   type FilePayload,
   type RxStats,
 } from "@/lib/lux/codec";
+import { probeDevice } from "@/lib/lux/device";
 import { playCue, installAudioUnlock } from "@/lib/lux/feedback";
-import { bytesToB64, drawMatrix, encodeFrameQr, qrVersionForBytes } from "@/lib/lux/qr";
 import { fileFromBlob, loadApkSample, makeNote, makeWindowLight } from "@/lib/lux/samples";
 import { formatBytes } from "@/lib/utils";
-
-const TARGET_FPS = 24;
-const APK_FPS = 12;
 
 type SampleId = "photo" | "note" | "file" | "apk-send" | "apk-receive";
 
@@ -26,16 +24,20 @@ export function AppSend() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [stats, setStats] = useState<RxStats>(emptyStats());
-  const [status, setStatus] = useState("Pick a payload to start broadcasting.");
+  const [status, setStatus] = useState("Pick a file to fill the screen with QR frames.");
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [sample, setSample] = useState<SampleId>("photo");
   const [picked, setPicked] = useState<FilePayload | null>(null);
   const [armed, setArmed] = useState(false);
   const [runId, setRunId] = useState(0);
+  const [deviceLabel, setDeviceLabel] = useState("");
 
   useTransferCues(stats, { error });
   useEffect(() => installAudioUnlock(), []);
+  useEffect(() => {
+    setDeviceLabel(probeDevice().label);
+  }, []);
 
   const loadPayload = useCallback(async (): Promise<FilePayload> => {
     if (picked) return picked;
@@ -48,7 +50,7 @@ export function AppSend() {
   useEffect(() => {
     if (!armed) return;
     let cancelled = false;
-    let raf = 0;
+    let stop: (() => void) | null = null;
     const statsRef = { current: emptyStats() };
     const flush = window.setInterval(() => {
       if (!cancelled) setStats({ ...statsRef.current });
@@ -62,55 +64,21 @@ export function AppSend() {
         if (cancelled) return;
         const tx = await Transmitter.fromFile(payload);
         if (cancelled) return;
-        const first = tx.next();
-        const version = qrVersionForBytes(bytesToB64(first.bytes).length);
         setRunning(true);
         playCue("start");
         setStatus(
-          `${payload.filename} · ${formatBytes(payload.bytes.byteLength)} · ${tx.header.k} blocks`,
+          `${payload.filename} · ${formatBytes(payload.bytes.byteLength)} · ${tx.header.k} pieces`,
         );
-
-        let last = 0;
-        let frames = 0;
-        let fpsWindow = performance.now();
-        const apk = sample === "apk-send" || sample === "apk-receive";
-        const frameMs = 1000 / (apk ? APK_FPS : TARGET_FPS);
-
-        const pump = (bytes: Uint8Array) => {
-          const qr = encodeFrameQr(bytes, version);
-          const canvas = canvasRef.current;
-          if (canvas) drawMatrix(canvas, qr.matrix);
-          frames += 1;
-          const now = performance.now();
-          if (now - fpsWindow >= 400) {
-            const fps = (frames / (now - fpsWindow)) * 1000;
-            statsRef.current = {
-              ...statsRef.current,
-              txFps: fps,
-              captureFps: fps,
-              bytesPerFrame: bytes.byteLength,
-              blockLen: tx.header.blockSize,
-              k: tx.header.k,
-              session: (tx.header.session >>> 0).toString(16).padStart(8, "0").slice(-4),
-              filename: tx.header.filename,
-              locked: true,
-              payloadBytes: payload.bytes.byteLength,
-            };
-            frames = 0;
-            fpsWindow = now;
-          }
-        };
-
-        pump(first.bytes);
-        const loop = (t: number) => {
-          if (cancelled) return;
-          if (t - last >= frameMs) {
-            last = t;
-            pump(tx.next().bytes);
-          }
-          raf = requestAnimationFrame(loop);
-        };
-        raf = requestAnimationFrame(loop);
+        const handle = startBroadcast({
+          tx,
+          canvas: () => canvasRef.current,
+          payloadBytes: payload.bytes.byteLength,
+          filename: payload.filename,
+          onStats(patch) {
+            statsRef.current = { ...statsRef.current, ...patch };
+          },
+        });
+        stop = handle.stop;
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Failed to start transfer");
@@ -120,7 +88,7 @@ export function AppSend() {
 
     return () => {
       cancelled = true;
-      cancelAnimationFrame(raf);
+      stop?.();
       window.clearInterval(flush);
     };
   }, [armed, runId, loadPayload]);
@@ -129,7 +97,7 @@ export function AppSend() {
     const file = list?.[0];
     if (!file) return;
     if (file.size > MAX_FILE_BYTES) {
-      setError(`Keep files under ${MAX_FILE_BYTES / 1024} KB.`);
+      setError(`Keep files under ${formatBytes(MAX_FILE_BYTES)}.`);
       return;
     }
     const payload = await fileFromBlob(file);
@@ -150,11 +118,16 @@ export function AppSend() {
     <div className="flex min-h-dvh flex-col bg-bg text-fg">
       <header className="flex items-center justify-between px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2">
         <p className="font-mono text-xs tracking-[0.18em] text-subtle uppercase">LUX Send</p>
-        <FeedbackToggle />
+        <div className="flex items-center gap-2">
+          <p className="hidden font-mono text-xs text-muted sm:block">{deviceLabel}</p>
+          <FeedbackToggle />
+        </div>
       </header>
 
       <div className="px-4">
-        <QrPlate canvasRef={canvasRef} />
+        <div className="mx-auto w-full max-w-[min(92vmin,920px)]">
+          <QrPlate canvasRef={canvasRef} size="hero" />
+        </div>
         <div className="mt-3">
           <ScanHud stats={stats} role="send" />
         </div>
@@ -170,6 +143,12 @@ export function AppSend() {
 
       <div className="mt-auto flex flex-col gap-3 px-4 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <p className="text-xs tracking-[0.14em] text-subtle uppercase">Payload</p>
+        <Button
+          variant={picked ? "default" : "outline"}
+          onClick={() => inputRef.current?.click()}
+        >
+          {picked ? picked.filename : "Your file"}
+        </Button>
         <div className="grid grid-cols-2 gap-2">
           <Button
             size="sm"
@@ -185,28 +164,6 @@ export function AppSend() {
           >
             Plain note
           </Button>
-          <Button
-            size="sm"
-            variant={sample === "apk-send" && !picked ? "default" : "outline"}
-            onClick={() => startSample("apk-send")}
-          >
-            Send APK
-          </Button>
-          <Button
-            size="sm"
-            variant={sample === "apk-receive" && !picked ? "default" : "outline"}
-            onClick={() => startSample("apk-receive")}
-          >
-            Receive APK
-          </Button>
-          <Button
-            className="col-span-2"
-            size="sm"
-            variant={picked ? "default" : "outline"}
-            onClick={() => inputRef.current?.click()}
-          >
-            {picked ? picked.filename : "Your file"}
-          </Button>
         </div>
         <input
           ref={inputRef}
@@ -216,12 +173,11 @@ export function AppSend() {
         />
         {running ? (
           <p className="text-xs text-muted">
-            Keep this screen bright. Point LUX Receive at the plate. The fountain loops until you
-            pick another file.
+            Fill the other camera with this plate. {deviceLabel}
           </p>
         ) : (
           <p className="text-xs text-muted">
-            Files up to {MAX_FILE_BYTES / 1024} KB. No network is used.
+            Files up to {formatBytes(MAX_FILE_BYTES)}. No network is used.
           </p>
         )}
       </div>

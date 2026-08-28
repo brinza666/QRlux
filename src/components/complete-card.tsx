@@ -35,17 +35,6 @@ export function CompleteCard({
     result.blob.text().then(setText).catch(() => setText(null));
   }, [isText, result.blob]);
 
-  useEffect(() => {
-    if (!isApk || android) return;
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = result.header.filename;
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }, [android, isApk, result.header.filename, url]);
-
   const seconds = result.elapsedMs / 1000;
 
   function saveOnPhone() {
