@@ -5,6 +5,7 @@ import {
   splitBlocks,
   symbolNeighbors,
 } from "./fountain";
+import { densityCap, loadTune } from "./settings";
 
 export const MAGIC = new Uint8Array([0x4c, 0x55, 0x58, 0x01]); // LUX\x01
 export const TYPE_HEADER = 1;
@@ -41,10 +42,13 @@ const MIME_MAX = 40;
 const HEADER_CORE = 4 + 1 + 1 + 2 + 2 + 4 + 4 + 4 + 32 + 1 + NAME_MAX + 1 + MIME_MAX;
 
 export function chooseBlockSize(payloadSize: number): number {
-  const targetK =
-    payloadSize < 80_000 ? 32 : payloadSize < 400_000 ? 64 : payloadSize < 2_000_000 ? 96 : 160;
-  let bs = Math.ceil(payloadSize / targetK);
-  bs = Math.max(360, Math.min(720, bs));
+  let density = loadTune().density;
+  if (payloadSize > 800_000 && density === "easy") density = "fast";
+  else if (payloadSize > 250_000 && density === "easy") density = "balanced";
+  const { min, max, targetK } = densityCap(density);
+  const aim = payloadSize < 80_000 ? Math.min(32, targetK) : targetK;
+  let bs = Math.ceil(payloadSize / aim);
+  bs = Math.max(min, Math.min(max, bs));
   bs = Math.ceil(bs / 16) * 16;
   return bs;
 }
@@ -213,6 +217,16 @@ export class Transmitter {
       frameLen: frameLength(blockSize),
     };
     return new Transmitter(header, file.bytes, blocks);
+  }
+
+  headerBytes(): Uint8Array {
+    return packHeader(this.header);
+  }
+
+  symbolAt(esi: number): Uint8Array {
+    const neigh = symbolNeighbors(esi, this.header.k, this.cdf);
+    const payload = encodeSymbol(this.blocks, neigh);
+    return packSymbol(esi, payload, this.header.frameLen);
   }
 
   next(): TxFrame {

@@ -49,16 +49,23 @@ export function encodeFrameQr(bytes: Uint8Array, pinnedVersion?: number): QrFram
   return { matrix: result.data, size: result.size, version: result.version, text };
 }
 
+export const PLATE_PX = 888;
+
 let scratch: HTMLCanvasElement | null = null;
 
-export function drawMatrix(canvas: HTMLCanvasElement, matrix: boolean[][]): void {
-  const size = matrix.length;
+function scratchOf(size: number): HTMLCanvasElement {
   if (!scratch) scratch = document.createElement("canvas");
   if (scratch.width !== size || scratch.height !== size) {
     scratch.width = size;
     scratch.height = size;
   }
-  const sctx = scratch.getContext("2d", { alpha: false });
+  return scratch;
+}
+
+export function blitMatrix(canvas: HTMLCanvasElement, matrix: boolean[][]): void {
+  const size = matrix.length;
+  const src = scratchOf(size);
+  const sctx = src.getContext("2d", { alpha: false });
   if (!sctx) return;
   const img = sctx.createImageData(size, size);
   const buf = img.data;
@@ -74,16 +81,20 @@ export function drawMatrix(canvas: HTMLCanvasElement, matrix: boolean[][]): void
     }
   }
   sctx.putImageData(img, 0, 0);
-  const scale = Math.max(2, Math.min(6, Math.floor(720 / Math.max(size, 1))));
-  const px = size * scale;
-  if (canvas.width !== px || canvas.height !== px) {
-    canvas.width = px;
-    canvas.height = px;
+  if (canvas.width !== PLATE_PX || canvas.height !== PLATE_PX) {
+    canvas.width = PLATE_PX;
+    canvas.height = PLATE_PX;
   }
   const ctx = canvas.getContext("2d", { alpha: false });
   if (!ctx) return;
+  ctx.fillStyle = "#f4f4f2";
+  ctx.fillRect(0, 0, PLATE_PX, PLATE_PX);
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(scratch, 0, 0, px, px);
+  ctx.drawImage(src, 0, 0, PLATE_PX, PLATE_PX);
+}
+
+export function drawMatrix(canvas: HTMLCanvasElement, matrix: boolean[][]): void {
+  blitMatrix(canvas, matrix);
 }
 
 export function drawUrlQr(canvas: HTMLCanvasElement, url: string): void {

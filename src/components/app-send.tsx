@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FeedbackToggle } from "@/components/feedback-toggle";
 import { QrPlate } from "@/components/qr-plate";
+import { TunePanel } from "@/components/tune-panel";
 import { Button } from "@/components/ui/button";
 import { startBroadcast } from "@/lib/lux/broadcast";
 import {
@@ -14,7 +15,8 @@ import { probeDevice } from "@/lib/lux/device";
 import { playCue, installAudioUnlock } from "@/lib/lux/feedback";
 import { drawUrlQr } from "@/lib/lux/qr";
 import { fileFromBlob, loadApkSample, makeNote, makeWindowLight } from "@/lib/lux/samples";
-import { FPS_DEFAULT, FPS_MAX, FPS_MIN, RECEIVE_WEB_URL } from "@/lib/lux/site";
+import { loadTune, saveTune, type Tune } from "@/lib/lux/settings";
+import { RECEIVE_WEB_URL } from "@/lib/lux/site";
 import { formatBytes } from "@/lib/utils";
 
 type SampleId = "photo" | "note" | "file" | "apk-send" | "apk-receive";
@@ -23,7 +25,7 @@ type Phase = "handshake" | "fountain";
 export function AppSend() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const fpsRef = useRef(FPS_DEFAULT);
+  const tuneRef = useRef<Tune>(loadTune());
   const [stats, setStats] = useState<RxStats>(emptyStats());
   const [status, setStatus] = useState("Scan the first QR with your phone camera.");
   const [error, setError] = useState<string | null>(null);
@@ -31,10 +33,15 @@ export function AppSend() {
   const [picked, setPicked] = useState<FilePayload | null>(null);
   const [phase, setPhase] = useState<Phase>("handshake");
   const [runId, setRunId] = useState(0);
-  const [fps, setFps] = useState(FPS_DEFAULT);
+  const [tune, setTune] = useState<Tune>(tuneRef.current);
+  const [showTune, setShowTune] = useState(false);
   const [deviceLabel, setDeviceLabel] = useState("");
 
-  fpsRef.current = fps;
+  const applyTune = (next: Tune) => {
+    const saved = saveTune(next);
+    tuneRef.current = saved;
+    setTune(saved);
+  };
 
   useEffect(() => installAudioUnlock(), []);
   useEffect(() => {
@@ -52,7 +59,7 @@ export function AppSend() {
     const id = window.setInterval(paint, 800);
     const auto = window.setTimeout(() => {
       if (!cancelled) setPhase("fountain");
-    }, 7000);
+    }, tuneRef.current.handshakeSec * 1000);
     return () => {
       cancelled = true;
       window.clearInterval(id);
@@ -96,7 +103,8 @@ export function AppSend() {
           payloadBytes: payload.bytes.byteLength,
           filename: payload.filename,
           handshakeUrl: RECEIVE_WEB_URL,
-          getTargetFps: () => fpsRef.current,
+          getTargetFps: () => tuneRef.current.fps,
+          getTune: () => tuneRef.current,
           onStats(patch) {
             statsRef.current = { ...statsRef.current, ...patch };
           },
@@ -137,14 +145,14 @@ export function AppSend() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-bg text-fg">
+    <div className="lux-app flex min-h-dvh flex-col bg-bg text-fg">
       <header className="flex items-center justify-between gap-2 px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-1">
         <p className="font-mono text-xs tracking-[0.16em] text-subtle uppercase">LUX Send</p>
-        <p className="truncate font-mono text-xs text-muted">
+        <p className="min-w-0 truncate font-mono text-xs text-muted">
           {deviceLabel}
           {stats.txFps ? ` · ${stats.txFps.toFixed(0)} fps` : ""}
         </p>
-        <FeedbackToggle className="size-9" />
+        <FeedbackToggle className="size-9 shrink-0" />
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col px-2">
@@ -157,33 +165,20 @@ export function AppSend() {
         </div>
         <p className="px-2 pt-2 text-center text-sm font-medium">
           {phase === "handshake"
-            ? "Scan this with your phone camera — opens Receive, or the receive webpage"
+            ? "Scan this with your phone camera — opens Receive"
             : stats.filename
               ? `Broadcasting ${stats.filename}`
               : status}
         </p>
         <p className="px-2 text-center text-xs text-muted">
           {phase === "handshake"
-            ? "If LUX Receive is installed it opens. If not, the browser opens ready to catch the file. Then keep this QR on screen."
-            : `${formatBytes(stats.payloadBytes || 0)} · ${stats.k || "—"} pieces · target ${fps} fps`}
+            ? "Same-size plate as the fountain. Then keep this screen in the foreground."
+            : `${formatBytes(stats.payloadBytes || 0)} · ${stats.k || "—"} pieces · hold ${tune.hold}× · echo ${tune.echoPct}%`}
         </p>
         {error ? <p className="px-2 text-center text-xs text-fg">{error}</p> : null}
       </div>
 
-      <div className="flex flex-col gap-3 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <label className="flex items-center gap-3 text-xs text-muted">
-          <span className="w-10 shrink-0 font-mono text-fg">{fps} fps</span>
-          <input
-            type="range"
-            min={FPS_MIN}
-            max={FPS_MAX}
-            step={1}
-            value={fps}
-            onChange={(e) => setFps(Number(e.target.value))}
-            className="h-2 w-full accent-accent"
-            aria-label="Frame rate"
-          />
-        </label>
+      <div className="flex flex-col gap-2 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Button
             size="sm"
@@ -213,9 +208,17 @@ export function AppSend() {
               }
             }}
           >
-            {phase === "handshake" ? "Start fountain" : "Show setup QR"}
+            {phase === "handshake" ? "Start fountain" : "Setup QR"}
           </Button>
         </div>
+        <Button size="sm" variant="ghost" onClick={() => setShowTune((v) => !v)}>
+          {showTune ? "Hide tune" : "Tune fps / hold / echo"}
+        </Button>
+        {showTune ? (
+          <div className="max-h-[40dvh] overflow-y-auto rounded-xl border border-border bg-surface p-4">
+            <TunePanel tune={tune} onChange={applyTune} />
+          </div>
+        ) : null}
         <input
           ref={inputRef}
           type="file"

@@ -61,6 +61,17 @@
   p {
     text-wrap: pretty;
   }
+
+  .lux-cam-src {
+    position: fixed !important;
+    left: -120vw !important;
+    top: 0 !important;
+    width: 16px !important;
+    height: 16px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
