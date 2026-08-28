@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CompleteCard } from "@/components/complete-card";
 import { QrPlate } from "@/components/qr-plate";
+import { ScanHud } from "@/components/scan-hud";
 import { StatGrid } from "@/components/stat-grid";
 import { Button } from "@/components/ui/button";
+import { useTransferCues } from "@/components/use-transfer-cues";
 import {
   emptyStats,
   MAX_FILE_BYTES,
@@ -15,6 +17,7 @@ import {
 import { bytesToB64, drawMatrix, encodeFrameQr, qrVersionForBytes } from "@/lib/lux/qr";
 import { fileFromBlob, loadApkSample, makeNote, makeWindowLight } from "@/lib/lux/samples";
 import { formatBytes } from "@/lib/utils";
+import { playCue, installAudioUnlock } from "@/lib/lux/feedback";
 
 const TARGET_FPS = 30;
 const APK_FPS = 12;
@@ -44,6 +47,9 @@ export function TransferStage({
   );
   const inputRef = useRef<HTMLInputElement>(null);
   const statsTimer = useRef<number>(0);
+
+  useTransferCues(stats, { complete: Boolean(result), error });
+  useEffect(() => installAudioUnlock(), []);
 
   const loadPayload = useCallback(async (): Promise<FilePayload> => {
     if (picked) return picked;
@@ -90,6 +96,7 @@ export function TransferStage({
         const first = tx.next();
         const version = qrVersionForBytes(bytesToB64(first.bytes).length);
         setRunning(true);
+        playCue("start");
         setStatus(
           `${payload.filename} · ${formatBytes(payload.bytes.byteLength)} · ${tx.header.k} blocks`,
         );
@@ -187,8 +194,6 @@ export function TransferStage({
     setRunId((n) => n + 1);
   }
 
-  const progress = stats.k ? Math.min(1, stats.recovered / stats.k) : 0;
-
   return (
     <div className="flex flex-col gap-6">
       {result ? (
@@ -212,22 +217,17 @@ export function TransferStage({
               {stats.bytesPerFrame ? `${stats.bytesPerFrame} B/frame` : "—"}
             </p>
           </div>
-          <QrPlate canvasRef={canvasRef} caption={stats.filename || undefined} />
-          {mode === "demo" ? (
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-2">
-              <div
-                className="h-full bg-accent transition-[width] duration-150"
-                style={{ width: `${progress * 100}%` }}
-              />
-            </div>
-          ) : null}
+          <QrPlate canvasRef={canvasRef} />
+          <div className="mt-3">
+            <ScanHud stats={stats} role={mode === "demo" ? "demo" : "send"} />
+          </div>
           <p className="mt-3 text-xs text-muted">{status}</p>
           {error ? <p className="mt-2 text-xs text-fg">{error}</p> : null}
         </div>
 
         <div className="flex flex-col gap-5">
           <div className="rounded-xl border border-border bg-surface p-5">
-            <StatGrid stats={stats} />
+            <StatGrid stats={stats} role={mode === "demo" ? "demo" : "send"} />
           </div>
 
           <div className="flex flex-col gap-3">

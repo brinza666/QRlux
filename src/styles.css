@@ -14,6 +14,7 @@
   --color-accent-fg: #09090b;
   --color-border: #26262b;
   --color-ok: #86efac;
+  --color-warn: #e7c9a5;
   --color-paper: #f4f4f2;
   --color-ink: #0a0a0a;
 
@@ -70,4 +71,23 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
+  .scan-pulse {
+    animation: none;
+  }
 }
+
+@keyframes scan-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.scan-pulse {
+  animation: scan-pulse 1.4s var(--ease-smooth-out) infinite;
+}
+

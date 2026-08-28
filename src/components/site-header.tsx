@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { FeedbackToggle } from "@/components/feedback-toggle";
 import { LuxMark } from "@/components/lux-mark";
 
 const links = [
@@ -27,9 +28,17 @@ export function SiteHeader() {
             className="rounded-sm px-2.5 py-2 text-xs text-muted transition-colors duration-150 hover:text-fg sm:px-3 sm:text-sm"
             activeProps={{ className: "text-fg" }}
           >
-            {l.label}
+            {l.to === "/how" ? (
+              <>
+                <span className="sm:hidden">How</span>
+                <span className="hidden sm:inline">How it works</span>
+              </>
+            ) : (
+              l.label
+            )}
           </Link>
         ))}
+        <FeedbackToggle className="size-9" />
       </nav>
     </header>
   );

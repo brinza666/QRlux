@@ -1,5 +1,6 @@
 import type { RxStats } from "@/lib/lux/codec";
-import { cn } from "@/lib/utils";
+import { etaLabel, transferProgress } from "@/lib/lux/progress";
+import { cn, formatBytes, formatRate } from "@/lib/utils";
 
 function Cell({
   label,
@@ -12,13 +13,11 @@ function Cell({
 }) {
   return (
     <div className="min-w-0">
-      <div className="text-[0.65rem] font-medium tracking-[0.14em] text-subtle uppercase">
-        {label}
-      </div>
+      <div className="text-xs font-medium tracking-[0.14em] text-subtle uppercase">{label}</div>
       <div
         className={cn(
-          "mt-1 font-mono text-lg leading-none font-medium tabular-nums sm:text-xl",
-          accent ? "text-accent" : "text-fg",
+          "mt-1 truncate font-mono text-base leading-none font-medium tabular-nums sm:text-lg",
+          accent ? "text-ok" : "text-fg",
         )}
       >
         {value}
@@ -27,35 +26,31 @@ function Cell({
   );
 }
 
-export function StatGrid({ stats }: { stats: RxStats }) {
+export function StatGrid({ stats, role = "receive" }: { stats: RxStats; role?: "receive" | "send" | "demo" }) {
   const fps = stats.txFps || stats.captureFps;
+  const p = transferProgress(stats, role);
+  const time = p.etaSec != null && p.pct < 1 ? etaLabel(p.etaSec) : stats.complete ? "done" : "—";
+
   return (
-    <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-      <Cell label="Capture fps" value={fps ? fps.toFixed(0) : "—"} />
-      <Cell label="Decode fps" value={stats.decodeFps ? stats.decodeFps.toFixed(1) : "—"} accent />
-      <Cell label="Lock" value={stats.locked ? "LOCK" : "—"} accent={stats.locked} />
-      <Cell label="Dropped" value={String(stats.dropped)} />
+    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
       <Cell
-        label="Goodput"
-        value={stats.goodputKBs ? `${stats.goodputKBs.toFixed(1)} KB/s` : "0.0 KB/s"}
-        accent
+        label="File"
+        value={stats.filename ? stats.filename : "waiting"}
       />
-      <Cell label="Elapsed" value={`${stats.elapsedSec.toFixed(1)} s`} />
       <Cell
-        label="Frames"
-        value={`${stats.framesNew}/${stats.framesDup}/${stats.framesRed}`}
+        label="Size"
+        value={stats.payloadBytes ? formatBytes(stats.payloadBytes) : "—"}
       />
-      <Cell label="Session" value={stats.session} />
-      <Cell label="Block len" value={stats.blockLen ? `${stats.blockLen} B` : "—"} />
       <Cell
-        label="Payload"
-        value={
-          stats.payloadBytes
-            ? stats.payloadBytes >= 1024
-              ? `${(stats.payloadBytes / 1024).toFixed(0)} KB`
-              : `${stats.payloadBytes} B`
-            : "—"
-        }
+        label="Pieces"
+        value={stats.k ? `${stats.recovered} / ${stats.k}` : "—"}
+        accent={stats.locked}
+      />
+      <Cell label="Time left" value={time} accent={Boolean(p.etaSec && p.pct < 1)} />
+      <Cell label="Camera" value={fps ? `${fps.toFixed(0)} fps` : "—"} />
+      <Cell
+        label="Speed"
+        value={stats.goodputKBs ? formatRate(stats.goodputKBs * 1024) : stats.decodeFps ? `${stats.decodeFps.toFixed(0)} fps` : "—"}
       />
     </div>
   );

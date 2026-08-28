@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { FeedbackToggle } from "@/components/feedback-toggle";
 import { QrPlate } from "@/components/qr-plate";
+import { ScanHud } from "@/components/scan-hud";
 import { StatGrid } from "@/components/stat-grid";
 import { Button } from "@/components/ui/button";
+import { useTransferCues } from "@/components/use-transfer-cues";
 import {
   emptyStats,
   MAX_FILE_BYTES,
@@ -9,6 +12,7 @@ import {
   type FilePayload,
   type RxStats,
 } from "@/lib/lux/codec";
+import { playCue, installAudioUnlock } from "@/lib/lux/feedback";
 import { bytesToB64, drawMatrix, encodeFrameQr, qrVersionForBytes } from "@/lib/lux/qr";
 import { fileFromBlob, loadApkSample, makeNote, makeWindowLight } from "@/lib/lux/samples";
 import { formatBytes } from "@/lib/utils";
@@ -29,6 +33,9 @@ export function AppSend() {
   const [picked, setPicked] = useState<FilePayload | null>(null);
   const [armed, setArmed] = useState(false);
   const [runId, setRunId] = useState(0);
+
+  useTransferCues(stats, { error });
+  useEffect(() => installAudioUnlock(), []);
 
   const loadPayload = useCallback(async (): Promise<FilePayload> => {
     if (picked) return picked;
@@ -58,6 +65,7 @@ export function AppSend() {
         const first = tx.next();
         const version = qrVersionForBytes(bytesToB64(first.bytes).length);
         setRunning(true);
+        playCue("start");
         setStatus(
           `${payload.filename} · ${formatBytes(payload.bytes.byteLength)} · ${tx.header.k} blocks`,
         );
@@ -141,21 +149,22 @@ export function AppSend() {
   return (
     <div className="flex min-h-dvh flex-col bg-bg text-fg">
       <header className="flex items-center justify-between px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2">
-        <p className="font-mono text-[0.65rem] tracking-[0.18em] text-subtle uppercase">LUX Send</p>
-        <p className="font-mono text-[0.65rem] text-muted">
-          {stats.txFps ? `${stats.txFps.toFixed(0)} FPS` : "idle"}
-        </p>
+        <p className="font-mono text-xs tracking-[0.18em] text-subtle uppercase">LUX Send</p>
+        <FeedbackToggle />
       </header>
 
       <div className="px-4">
-        <QrPlate canvasRef={canvasRef} caption={stats.filename || "waiting"} />
+        <QrPlate canvasRef={canvasRef} />
+        <div className="mt-3">
+          <ScanHud stats={stats} role="send" />
+        </div>
         <p className="mt-2 text-xs text-muted">{status}</p>
         {error ? <p className="mt-1 text-xs text-fg">{error}</p> : null}
       </div>
 
       <div className="mt-4 px-4">
         <div className="rounded-xl border border-border bg-surface p-4">
-          <StatGrid stats={stats} />
+          <StatGrid stats={stats} role="send" />
         </div>
       </div>
 
