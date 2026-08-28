@@ -82,6 +82,15 @@ export function TunePanel({
         unit="%"
         onChange={(echoPct) => set({ echoPct })}
       />
+      <SliderRow
+        label="Setup QR seconds"
+        hint="0 = stay until you tap Start fountain. Give the phone time to scan."
+        value={tune.handshakeSec}
+        min={0}
+        max={90}
+        unit={tune.handshakeSec === 0 ? " wait" : "s"}
+        onChange={(handshakeSec) => set({ handshakeSec })}
+      />
       <div>
         <p className="text-xs tracking-[0.12em] text-subtle uppercase">QR density</p>
         <div className="mt-2 grid grid-cols-3 gap-1">

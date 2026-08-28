@@ -7,7 +7,6 @@ export type CameraInfo = {
 const SAVED_LENS_KEY = "lux.lens.v1";
 
 let active: MediaStream | null = null;
-let owners = 0;
 
 export function loadSavedLens(): string {
   if (typeof window === "undefined") return "";
@@ -25,6 +24,21 @@ export function saveSavedLens(id: string): void {
   } catch {
     /* ignore */
   }
+}
+
+function stopStream(stream: MediaStream | null | undefined): void {
+  stream?.getTracks().forEach((t) => {
+    try {
+      t.stop();
+    } catch {
+      /* ignore */
+    }
+  });
+}
+
+export function stopCamera(): void {
+  stopStream(active);
+  active = null;
 }
 
 export async function listCameras(): Promise<CameraInfo[]> {
@@ -71,32 +85,33 @@ export function rankCameras(cams: CameraInfo[]): CameraInfo[] {
 
 export function pickDefaultCamera(cams: CameraInfo[]): string {
   if (!cams.length) return "";
-  const ranked = [...cams].sort((a, b) => scoreCamera(b) - scoreCamera(a));
-  return ranked[0]!.id;
+  return rankCameras(cams)[0]!.id;
+}
+
+type Caps = { torch?: boolean; zoom?: { min: number; max: number } };
+
+function videoConstraints(deviceId?: string, tightZoom = true): MediaTrackConstraints {
+  const base: MediaTrackConstraints = deviceId
+    ? { deviceId: { exact: deviceId } }
+    : { facingMode: { ideal: "environment" } };
+  if (tightZoom) {
+    (base as MediaTrackConstraints & { zoom?: unknown }).zoom = { ideal: 1, max: 1.25 };
+  }
+  return base;
 }
 
 export async function acquireCamera(deviceId?: string): Promise<MediaStream> {
   stopCamera();
-  // Do not ask for 1080p — on many phones that selects the telephoto crop
-  // ("mega zoom") instead of the main wide lens. Prefer 1x zoom.
-  const video = (
-    deviceId
-      ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 }, zoom: 1 }
-      : { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 }, zoom: 1 }
-  ) as MediaTrackConstraints;
   const attempts: MediaStreamConstraints[] = [
-    { audio: false, video },
-    {
-      audio: false,
-      video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" },
-    },
+    { audio: false, video: videoConstraints(deviceId, true) },
+    { audio: false, video: videoConstraints(deviceId, false) },
+    { audio: false, video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" } },
     { audio: false, video: true },
   ];
   let last: unknown;
   for (const c of attempts) {
     try {
       active = await navigator.mediaDevices.getUserMedia(c);
-      owners = 1;
       await resetZoomToUnity();
       return active;
     } catch (err) {
@@ -106,45 +121,18 @@ export async function acquireCamera(deviceId?: string): Promise<MediaStream> {
   throw last instanceof Error ? last : new Error("Camera unavailable");
 }
 
-/** Open a camera, then switch to the best rear (non-macro) lens if the OS picked badly. */
-export async function acquireBestCamera(preferredId?: string): Promise<{
-  stream: MediaStream;
-  cameras: CameraInfo[];
-  deviceId: string;
-}> {
-  let stream = await acquireCamera(preferredId || undefined);
-  const cameras = await listCameras();
-  const used = stream.getVideoTracks()[0]?.getSettings?.().deviceId ?? "";
-  const best = preferredId || pickDefaultCamera(cameras);
-  if (best && used && best !== used && !preferredId) {
-    releaseCamera();
-    stream = await acquireCamera(best);
-  }
-  const id =
-    stream.getVideoTracks()[0]?.getSettings?.().deviceId ||
-    best ||
-    used ||
-    cameras[0]?.id ||
-    "";
-  return { stream, cameras, deviceId: id };
-}
-
 export function releaseCamera(): void {
-  owners = Math.max(0, owners - 1);
-  if (owners === 0) stopCamera();
-}
-
-function stopCamera(): void {
-  active?.getTracks().forEach((t) => t.stop());
-  active = null;
-  owners = 0;
+  stopCamera();
 }
 
 export function currentTrack(): MediaStreamTrack | null {
   return active?.getVideoTracks()[0] ?? null;
 }
 
-type Caps = { torch?: boolean; zoom?: { min: number; max: number } };
+export function currentZoom(): number {
+  const z = currentTrack()?.getSettings?.().zoom;
+  return typeof z === "number" && z > 0 ? z : 1;
+}
 
 export function trackCaps(): {
   torch: boolean;
@@ -187,21 +175,30 @@ export async function resetZoomToUnity(): Promise<number> {
   const track = currentTrack();
   if (!track) return 1;
   const caps = track.getCapabilities?.() as Caps | undefined;
-  if (!caps?.zoom) return 1;
-  const min = caps.zoom.min ?? 1;
-  const max = caps.zoom.max ?? 1;
-  const target = min <= 1 && 1 <= max ? 1 : min;
-  try {
-    await track.applyConstraints({ advanced: [{ zoom: target } as MediaTrackConstraintSet] });
-  } catch {
+  const settings = track.getSettings?.() as { zoom?: number; focusMode?: string };
+  if (caps?.zoom) {
+    const min = caps.zoom.min ?? 1;
+    const max = caps.zoom.max ?? 1;
+    const target = min <= 1 && 1 <= max ? 1 : min;
     try {
-      await track.applyConstraints({ zoom: target } as MediaTrackConstraintSet);
+      await track.applyConstraints({ advanced: [{ zoom: target } as MediaTrackConstraintSet] });
     } catch {
-      /* not supported */
+      try {
+        await track.applyConstraints({ zoom: target } as MediaTrackConstraintSet);
+      } catch {
+        /* not supported */
+      }
     }
   }
-  const now = track.getSettings?.() as { zoom?: number } | undefined;
-  return now?.zoom ?? target;
+  try {
+    await track.applyConstraints({
+      advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet],
+    });
+  } catch {
+    /* not supported */
+  }
+  void settings;
+  return currentZoom();
 }
 
 export type ProbeResult = {
@@ -210,13 +207,36 @@ export type ProbeResult = {
   saved: string;
 };
 
-/** Permission ping + labels, then stop. Lets the user pick a lens before a live zoomed preview. */
+/** Permission + labels only. Stops the stream so no zoomed preview is left running. */
 export async function probeCameras(): Promise<ProbeResult> {
-  const stream = await acquireCamera();
-  const cameras = rankCameras(await listCameras());
-  const used = stream.getVideoTracks()[0]?.getSettings?.().deviceId ?? "";
-  releaseCamera();
-  const recommended = pickDefaultCamera(cameras) || used || cameras[0]?.id || "";
-  const saved = loadSavedLens();
-  return { cameras, recommended, saved };
+  stopCamera();
+  let stream: MediaStream | null = null;
+  try {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: { ideal: "environment" } },
+      });
+    } catch {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+    }
+    const cameras = rankCameras(await listCameras());
+    const used = stream.getVideoTracks()[0]?.getSettings?.().deviceId ?? "";
+    const recommended = pickDefaultCamera(cameras) || used || cameras[0]?.id || "";
+    const saved = loadSavedLens();
+    return { cameras, recommended, saved };
+  } finally {
+    stopStream(stream);
+  }
+}
+
+export function bindVideoEl(video: HTMLVideoElement): void {
+  video.muted = true;
+  video.playsInline = true;
+  video.autoplay = true;
+  video.controls = false;
+  video.disablePictureInPicture = true;
+  video.setAttribute("playsinline", "true");
+  video.setAttribute("webkit-playsinline", "true");
+  video.setAttribute("muted", "true");
 }

@@ -12,7 +12,7 @@ export type Tune = {
   density: Density;
 };
 
-const KEY = "lux.tune.v1";
+const KEY = "lux.tune.v2";
 
 export const TUNE_DEFAULT: Tune = {
   fps: 10,
@@ -20,7 +20,7 @@ export const TUNE_DEFAULT: Tune = {
   headerEvery: 3,
   echoPct: 12,
   handshakeLoop: false,
-  handshakeSec: 8,
+  handshakeSec: 0,
   density: "easy",
 };
 
@@ -48,7 +48,7 @@ export function sanitizeTune(raw: Partial<Tune> | null | undefined): Tune {
     headerEvery: clamp(Number(raw?.headerEvery ?? d.headerEvery), 2, 12),
     echoPct: clamp(Number(raw?.echoPct ?? d.echoPct), 0, 40),
     handshakeLoop: Boolean(raw?.handshakeLoop),
-    handshakeSec: clamp(Number(raw?.handshakeSec ?? d.handshakeSec), 3, 20),
+    handshakeSec: clamp(Number(raw?.handshakeSec ?? d.handshakeSec), 0, 90),
     density,
   };
 }

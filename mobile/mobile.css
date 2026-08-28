@@ -28,17 +28,26 @@ body {
 
 .lux-cam-src {
   position: fixed !important;
-  left: -120vw !important;
+  left: -200vw !important;
   top: 0 !important;
-  width: 16px !important;
-  height: 16px !important;
+  width: 1px !important;
+  height: 1px !important;
   opacity: 0 !important;
   pointer-events: none !important;
   overflow: hidden !important;
 }
 
-.lux-cam-src video {
-  width: 16px !important;
-  height: 16px !important;
+.lux-cam-src video,
+.lux-work {
+  width: 1px !important;
+  height: 1px !important;
   opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.lux-finder {
+  display: block;
+  width: 100%;
+  object-fit: contain;
+  background: #09090b;
 }

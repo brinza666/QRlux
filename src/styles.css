@@ -66,11 +66,25 @@
     position: fixed !important;
     left: -120vw !important;
     top: 0 !important;
-    width: 16px !important;
-    height: 16px !important;
+    width: 1px !important;
+    height: 1px !important;
     opacity: 0 !important;
     pointer-events: none !important;
     overflow: hidden !important;
+  }
+
+  .lux-work {
+    position: fixed !important;
+    left: -200vw !important;
+    width: 1px !important;
+    height: 1px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  .lux-finder {
+    object-fit: contain;
+    background: #09090b;
   }
 }
 

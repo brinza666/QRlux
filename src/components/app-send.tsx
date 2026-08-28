@@ -60,13 +60,17 @@ export function AppSend() {
     };
     paint();
     const id = window.setInterval(paint, 800);
-    const auto = window.setTimeout(() => {
-      if (!cancelled) setPhase("fountain");
-    }, tuneRef.current.handshakeSec * 1000);
+    const wait = tuneRef.current.handshakeSec;
+    const auto =
+      wait > 0
+        ? window.setTimeout(() => {
+            if (!cancelled) setPhase("fountain");
+          }, wait * 1000)
+        : 0;
     return () => {
       cancelled = true;
       window.clearInterval(id);
-      window.clearTimeout(auto);
+      if (auto) window.clearTimeout(auto);
     };
   }, [phase, runId]);
 
@@ -187,7 +191,7 @@ export function AppSend() {
         </p>
         <p className="px-2 text-center text-xs text-muted">
           {phase === "handshake"
-            ? "Same-size plate as the fountain. Then keep this screen in the foreground."
+            ? "This QR stays until you tap Start fountain. On the phone, pick a lens first."
             : `${formatBytes(stats.payloadBytes || 0)} · ${stats.k || "—"} pieces · keep the screen bright`}
         </p>
         {error ? <p className="px-2 text-center text-xs text-fg">{error}</p> : null}
