@@ -97,6 +97,54 @@ SHA-256 is checked before the file is offered back.
   return { filename: "arrived-as-light.txt", mime: "text/plain", bytes };
 }
 
+export const APK_MIME = "application/vnd.android.package-archive";
+
+export const APK_SAMPLES = {
+  send: {
+    filename: "lux-send.apk",
+    urls: [
+      "./releases/lux-send.apk",
+      "/releases/lux-send.apk",
+      "https://github.com/brinza666/QRlux/releases/download/v1.0.0/lux-send.apk",
+    ],
+  },
+  receive: {
+    filename: "lux-receive.apk",
+    urls: [
+      "./releases/lux-receive.apk",
+      "/releases/lux-receive.apk",
+      "https://github.com/brinza666/QRlux/releases/download/v1.0.0/lux-receive.apk",
+    ],
+  },
+} as const;
+
+export type ApkKind = keyof typeof APK_SAMPLES;
+
+export async function loadApkSample(kind: ApkKind): Promise<FilePayload> {
+  const spec = APK_SAMPLES[kind];
+  let lastErr: unknown;
+  for (const url of spec.urls) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        lastErr = new Error(`${url} → ${res.status}`);
+        continue;
+      }
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      if (bytes.byteLength < 1000) {
+        lastErr = new Error(`${url} too small`);
+        continue;
+      }
+      return { filename: spec.filename, mime: APK_MIME, bytes };
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw new Error(
+    `Could not load ${spec.filename}. ${lastErr instanceof Error ? lastErr.message : ""}`.trim(),
+  );
+}
+
 export async function fileFromBlob(file: File): Promise<FilePayload> {
   const buf = new Uint8Array(await file.arrayBuffer());
   return {
@@ -105,3 +153,4 @@ export async function fileFromBlob(file: File): Promise<FilePayload> {
     bytes: buf,
   };
 }
+

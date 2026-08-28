@@ -20,13 +20,15 @@ npm run build:mobile
 cd android
 gradle assembleSendRelease assembleReceiveRelease --no-daemon
 
-mkdir -p ../releases
+mkdir -p ../releases ../public/releases
 cp app/build/outputs/apk/send/release/lux-send.apk ../releases/lux-send.apk
 cp app/build/outputs/apk/receive/release/lux-receive.apk ../releases/lux-receive.apk
+cp ../releases/lux-send.apk ../releases/lux-receive.apk ../public/releases/
 
 (
   cd ../releases
   sha256sum lux-send.apk lux-receive.apk > SHA256SUMS
+  cp SHA256SUMS ../public/releases/SHA256SUMS
 )
 
 ls -lh ../releases

@@ -21,6 +21,9 @@ export function CompleteCard({
   const isVideo = mime.startsWith("video/");
   const isAudio = mime.startsWith("audio/");
   const isText = mime.startsWith("text/") || mime === "application/json";
+  const isApk =
+    result.header.filename.toLowerCase().endsWith(".apk") ||
+    mime.includes("android.package");
   const android = getLuxAndroid();
 
   useEffect(() => {
@@ -31,6 +34,17 @@ export function CompleteCard({
     if (!isText) return;
     result.blob.text().then(setText).catch(() => setText(null));
   }, [isText, result.blob]);
+
+  useEffect(() => {
+    if (!isApk || android) return;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = result.header.filename;
+    a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }, [android, isApk, result.header.filename, url]);
 
   const seconds = result.elapsedMs / 1000;
 
@@ -76,7 +90,9 @@ export function CompleteCard({
         ) : null}
         {!isImage && !isVideo && !isAudio && !isText ? (
           <p className="px-2 py-6 text-center text-sm text-muted">
-            Binary file reconstructed. Download to save it.
+            {isApk
+              ? "APK reconstructed. Download it now, then open the file to install later."
+              : "Binary file reconstructed. Download to save it."}
           </p>
         ) : null}
       </div>

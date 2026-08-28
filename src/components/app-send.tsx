@@ -10,12 +10,13 @@ import {
   type RxStats,
 } from "@/lib/lux/codec";
 import { bytesToB64, drawMatrix, encodeFrameQr, qrVersionForBytes } from "@/lib/lux/qr";
-import { fileFromBlob, makeNote, makeWindowLight } from "@/lib/lux/samples";
+import { fileFromBlob, loadApkSample, makeNote, makeWindowLight } from "@/lib/lux/samples";
 import { formatBytes } from "@/lib/utils";
 
 const TARGET_FPS = 24;
+const APK_FPS = 12;
 
-type SampleId = "photo" | "note" | "file";
+type SampleId = "photo" | "note" | "file" | "apk-send" | "apk-receive";
 
 export function AppSend() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -32,6 +33,8 @@ export function AppSend() {
   const loadPayload = useCallback(async (): Promise<FilePayload> => {
     if (picked) return picked;
     if (sample === "note") return makeNote();
+    if (sample === "apk-send") return loadApkSample("send");
+    if (sample === "apk-receive") return loadApkSample("receive");
     return makeWindowLight();
   }, [picked, sample]);
 
@@ -62,7 +65,8 @@ export function AppSend() {
         let last = 0;
         let frames = 0;
         let fpsWindow = performance.now();
-        const frameMs = 1000 / TARGET_FPS;
+        const apk = sample === "apk-send" || sample === "apk-receive";
+        const frameMs = 1000 / (apk ? APK_FPS : TARGET_FPS);
 
         const pump = (bytes: Uint8Array) => {
           const qr = encodeFrameQr(bytes, version);
@@ -171,6 +175,20 @@ export function AppSend() {
             onClick={() => startSample("note")}
           >
             Plain note
+          </Button>
+          <Button
+            size="sm"
+            variant={sample === "apk-send" && !picked ? "default" : "outline"}
+            onClick={() => startSample("apk-send")}
+          >
+            Send APK
+          </Button>
+          <Button
+            size="sm"
+            variant={sample === "apk-receive" && !picked ? "default" : "outline"}
+            onClick={() => startSample("apk-receive")}
+          >
+            Receive APK
           </Button>
           <Button
             className="col-span-2"

@@ -16,7 +16,9 @@ Then:
 1. **Home** — live same-screen loopback. A JPEG is fountain-coded, painted as QR, and rebuilt in place.
 2. **Send** — pick a file (or a built-in sample). Keep the QR plate on screen.
 3. **Receive** — on a second device, grant camera, point at the sender. Start mid-stream if you want; fountain codes do not care which frames you catch.
-4. **Android** — two sideload APKs (`lux-send.apk`, `lux-receive.apk`) live in [`releases/`](releases/README.md). Open that folder on the phone and download for later install.
+4. **Android** — two sideload APKs (`lux-send.apk`, `lux-receive.apk`) live in [`releases/`](releases/README.md) and are also served from the web app at `/releases/*.apk`.
+   - Direct: open the site on the phone → Android → download.
+   - Optical: PC opens [Send](/send?payload=receive-apk) and taps **Receive APK**; the phone opens Receive in the browser, then downloads the reconstructed APK.
 
 `npm run typecheck` and `npm test` cover the TypeScript surface and the fountain round-trip. `npm run build:apks` rebuilds both Android packages.
 

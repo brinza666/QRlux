@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Download, Smartphone } from "lucide-react";
+import { Camera, Download, Smartphone, Upload } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/android")({ component: AndroidPage });
 
-const SEND_APK = "https://github.com/brinza666/QRlux/raw/main/releases/lux-send.apk";
-const RECEIVE_APK = "https://github.com/brinza666/QRlux/raw/main/releases/lux-receive.apk";
+const GH_SEND = "https://github.com/brinza666/QRlux/releases/download/v1.0.0/lux-send.apk";
+const GH_RECV = "https://github.com/brinza666/QRlux/releases/download/v1.0.0/lux-receive.apk";
 const RELEASE = "https://github.com/brinza666/QRlux/releases";
 
 function AndroidPage() {
@@ -21,71 +21,92 @@ function AndroidPage() {
           Two phones, two APKs.
         </h1>
         <p className="mt-5 text-[0.95rem] leading-relaxed text-muted">
-          Sideload LUX Send on the broadcasting phone and LUX Receive on the camera phone. The
-          packages live in the GitHub repo so you can download them later from the phone itself —
-          no Play Store, no pairing.
+          The installers are already on this site (~142 KB each). Download them in the phone
+          browser, or beam them as light from a PC — then install later.
         </p>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        <section className="mt-8 rounded-xl border border-border bg-surface p-5">
+          <p className="font-mono text-[0.65rem] tracking-[0.16em] text-subtle">AS LIGHT</p>
+          <h2 className="mt-2 text-lg font-medium">PC screen → phone browser</h2>
+          <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-muted">
+            <li>
+              On the computer, open Send and tap <span className="text-fg">Receive APK</span> (or
+              Send APK). The QR fountain starts immediately.
+            </li>
+            <li>
+              On the phone, open this same site in the browser and go to Receive. Point the camera
+              at the computer. No app install needed yet.
+            </li>
+            <li>
+              When transfer completes the browser downloads <span className="font-mono text-fg">lux-receive.apk</span>.
+              Open that file later to install.
+            </li>
+          </ol>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button asChild>
+              <Link to="/send" search={{ payload: "receive-apk" }}>
+                <Upload className="size-4" />
+                Beam Receive APK
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/send" search={{ payload: "send-apk" }}>
+                Beam Send APK
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/receive">
+                <Camera className="size-4" />
+                Receive
+              </Link>
+            </Button>
+          </div>
+        </section>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <article className="rounded-xl border border-border bg-surface p-5">
             <p className="font-mono text-[0.65rem] tracking-[0.16em] text-subtle">SEND</p>
             <h2 className="mt-2 text-lg font-medium">LUX Send</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              Pick a file. The screen becomes a fountain of QR frames. Keep it in the foreground
-              and bright.
+              Broadcast a file from the phone screen. Direct download, no Play Store.
             </p>
             <Button asChild className="mt-5 w-full">
-              <a href={SEND_APK} download="lux-send.apk">
+              <a href="/releases/lux-send.apk" download="lux-send.apk">
                 <Download className="size-4" />
                 lux-send.apk
               </a>
             </Button>
+            <a href={GH_SEND} className="mt-2 block text-center text-xs text-muted underline-offset-2 hover:underline">
+              GitHub mirror
+            </a>
           </article>
           <article className="rounded-xl border border-border bg-surface p-5">
             <p className="font-mono text-[0.65rem] tracking-[0.16em] text-subtle">RECEIVE</p>
             <h2 className="mt-2 text-lg font-medium">LUX Receive</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              Point the camera at the sender. When the hash matches, save the file to Downloads.
+              Camera decoder. Save reconstructed files to Downloads.
             </p>
             <Button asChild className="mt-5 w-full">
-              <a href={RECEIVE_APK} download="lux-receive.apk">
+              <a href="/releases/lux-receive.apk" download="lux-receive.apk">
                 <Download className="size-4" />
                 lux-receive.apk
               </a>
             </Button>
+            <a href={GH_RECV} className="mt-2 block text-center text-xs text-muted underline-offset-2 hover:underline">
+              GitHub mirror
+            </a>
           </article>
         </div>
 
-        <ol className="mt-10 list-decimal space-y-3 pl-5 text-sm leading-relaxed text-muted">
-          <li>On the phone, open this page (or the GitHub repo) and tap the APK you need.</li>
-          <li>
-            Android will warn that the file is from outside Play. Allow the browser to install
-            unknown apps, then Install.
-          </li>
-          <li>Grant the camera permission on Receive. Send only needs a file picker.</li>
-          <li>
-            Preview the same UIs in the browser first:{" "}
-            <Link to="/app/send" className="text-fg underline-offset-2 hover:underline">
-              Send shell
-            </Link>{" "}
-            and{" "}
-            <Link to="/app/receive" className="text-fg underline-offset-2 hover:underline">
-              Receive shell
-            </Link>
-            .
-          </li>
-        </ol>
-
         <p className="mt-8 text-sm text-muted">
-          Signed with a debug keystore for sideloading. Rebuild with{" "}
-          <span className="font-mono text-fg">npm run build:apks</span>. Also published under{" "}
+          Allow the browser to install unknown apps when you open the APK. Also on{" "}
           <a href={RELEASE} className="text-fg underline-offset-2 hover:underline">
             GitHub Releases
           </a>
           .
         </p>
 
-        <div className="mt-8 flex items-center gap-2 text-sm text-muted">
+        <div className="mt-6 flex items-center gap-2 text-sm text-muted">
           <Smartphone className="size-4" />
           Android 8+ (API 26). WebView, no Play services.
         </div>
