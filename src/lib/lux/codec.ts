@@ -5,6 +5,7 @@ import {
   splitBlocks,
   symbolNeighbors,
 } from "./fountain";
+import { FOUNTAIN_ECC, FOUNTAIN_MAX_VERSION, maxFrameBytesForVersion } from "./qr";
 import { densityCap, loadTune } from "./settings";
 
 export const MAGIC = new Uint8Array([0x4c, 0x55, 0x58, 0x01]); // LUX\x01
@@ -46,11 +47,16 @@ export function chooseBlockSize(payloadSize: number): number {
   if (payloadSize > 800_000 && density === "easy") density = "fast";
   else if (payloadSize > 250_000 && density === "easy") density = "balanced";
   const { min, max, targetK } = densityCap(density);
+  const maxFrame = maxFrameBytesForVersion(FOUNTAIN_MAX_VERSION, FOUNTAIN_ECC);
+  const qrMaxBlock = Math.max(16, Math.floor((maxFrame - 9) / 16) * 16);
   const aim = payloadSize < 80_000 ? Math.min(32, targetK) : targetK;
-  let bs = Math.ceil(payloadSize / aim);
-  bs = Math.max(min, Math.min(max, bs));
+  const hi = Math.min(max, qrMaxBlock);
+  const lo = Math.min(min, hi);
+  let bs = Math.ceil(payloadSize / Math.max(1, aim));
+  bs = Math.min(hi, Math.max(lo, bs));
   bs = Math.ceil(bs / 16) * 16;
-  return bs;
+  if (bs > hi) bs = hi - (hi % 16);
+  return Math.max(16, bs);
 }
 
 export function frameLength(blockSize: number): number {

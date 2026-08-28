@@ -15,12 +15,12 @@ export type Tune = {
 const KEY = "lux.tune.v1";
 
 export const TUNE_DEFAULT: Tune = {
-  fps: 12,
-  hold: 3,
+  fps: 10,
+  hold: 2,
   headerEvery: 3,
-  echoPct: 18,
+  echoPct: 12,
   handshakeLoop: false,
-  handshakeSec: 6,
+  handshakeSec: 8,
   density: "easy",
 };
 
@@ -75,7 +75,8 @@ export function saveTune(tune: Tune): Tune {
 }
 
 export function densityCap(density: Density): { min: number; max: number; targetK: number } {
-  if (density === "easy") return { min: 280, max: 480, targetK: 48 };
-  if (density === "fast") return { min: 400, max: 1200, targetK: 96 };
-  return { min: 360, max: 720, targetK: 64 };
+  // Block sizes stay inside a phone-scannable QR (see FOUNTAIN_MAX_VERSION).
+  if (density === "easy") return { min: 160, max: 320, targetK: 80 };
+  if (density === "fast") return { min: 240, max: 400, targetK: 120 };
+  return { min: 192, max: 360, targetK: 96 };
 }

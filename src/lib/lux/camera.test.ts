@@ -35,4 +35,14 @@ describe("default lens", () => {
     ];
     assert.equal(pickDefaultCamera(cams), "0");
   });
+
+  it("never prefers a telephoto / 3x over the main wide", () => {
+    const cams = [
+      cam("tele", "Back Telephoto Camera 3x", "environment"),
+      cam("wide", "Back Camera", "environment"),
+      cam("macro", "Back Macro Camera", "environment"),
+    ];
+    assert.equal(pickDefaultCamera(cams), "wide");
+    assert.ok(scoreCamera(cams[1]!) > scoreCamera(cams[0]!));
+  });
 });

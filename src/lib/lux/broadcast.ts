@@ -64,6 +64,8 @@ export function startBroadcast(opts: {
         k: opts.tx.header.k,
         blockLen: opts.tx.header.blockSize,
         locked: true,
+        framesNew: unique,
+        recovered: Math.min(unique, opts.tx.header.k),
       });
       frames = 0;
       fpsWindow = now;

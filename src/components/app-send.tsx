@@ -188,7 +188,7 @@ export function AppSend() {
         <p className="px-2 text-center text-xs text-muted">
           {phase === "handshake"
             ? "Same-size plate as the fountain. Then keep this screen in the foreground."
-            : `${formatBytes(stats.payloadBytes || 0)} · ${stats.k || "—"} pieces · hold ${tune.hold}× · echo ${tune.echoPct}%`}
+            : `${formatBytes(stats.payloadBytes || 0)} · ${stats.k || "—"} pieces · keep the screen bright`}
         </p>
         {error ? <p className="px-2 text-center text-xs text-fg">{error}</p> : null}
       </div>

@@ -72,7 +72,7 @@ export function createScanner(video: HTMLVideoElement, work: HTMLCanvasElement) 
       }
       const ctx = work.getContext("2d", { willReadFrequently: true });
       if (!ctx || !video.videoWidth) return null;
-      const w = Math.min(800, video.videoWidth);
+      const w = Math.min(1280, video.videoWidth);
       const h = Math.round((video.videoHeight * w) / video.videoWidth);
       if (work.width !== w || work.height !== h) {
         work.width = w;
@@ -80,7 +80,7 @@ export function createScanner(video: HTMLVideoElement, work: HTMLCanvasElement) 
       }
       ctx.drawImage(video, 0, 0, w, h);
       const img = ctx.getImageData(0, 0, w, h);
-      const code = jsQR(img.data, w, h, { inversionAttempts: "dontInvert" });
+      const code = jsQR(img.data, w, h, { inversionAttempts: "attemptBoth" });
       if (code?.data) lastHit = performance.now();
       return code?.data ?? null;
     },

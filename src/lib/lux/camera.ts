@@ -4,8 +4,28 @@ export type CameraInfo = {
   facing: "environment" | "user" | "unknown";
 };
 
+const SAVED_LENS_KEY = "lux.lens.v1";
+
 let active: MediaStream | null = null;
 let owners = 0;
+
+export function loadSavedLens(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return window.localStorage.getItem(SAVED_LENS_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+export function saveSavedLens(id: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SAVED_LENS_KEY, id);
+  } catch {
+    /* ignore */
+  }
+}
 
 export async function listCameras(): Promise<CameraInfo[]> {
   if (!navigator.mediaDevices?.enumerateDevices) return [];
@@ -27,7 +47,7 @@ function camIndex(label: string): number | null {
   return m ? Number(m[1]) : null;
 }
 
-/** Higher is better. Macro / ultra-wide / front score last. Plain "wide" is the main lens. */
+/** Higher is better. Macro / telephoto / ultra-wide / front score last. Plain "wide" is the main lens. */
 export function scoreCamera(cam: CameraInfo): number {
   const l = cam.label.toLowerCase();
   if (cam.facing === "user" || /front|selfie|face/.test(l)) return -1000;
@@ -35,13 +55,18 @@ export function scoreCamera(cam: CameraInfo): number {
   if (/depth|tof|infrared|\bir\b/.test(l)) return -800;
   let s = 0;
   if (/ultra[\s-]?wide|ultrawide/.test(l)) s -= 700;
-  else if (/\btele(photo)?\b/.test(l)) s -= 400;
+  if (/\btele(photo)?\b|periscope/.test(l)) s -= 600;
+  if (/\b([2-9]|1[0-9])(\.\d+)?x\b/.test(l)) s -= 500;
   if (cam.facing === "environment" || /back|rear|environment|world/.test(l)) s += 300;
   if (/\bmain\b|\bprimary\b|\bstandard\b/.test(l)) s += 200;
   if (/\bwide\b/.test(l) && !/ultra/.test(l)) s += 150;
   const idx = camIndex(cam.label);
   if (idx !== null) s += Math.max(0, 80 - idx * 25);
   return s;
+}
+
+export function rankCameras(cams: CameraInfo[]): CameraInfo[] {
+  return [...cams].sort((a, b) => scoreCamera(b) - scoreCamera(a));
 }
 
 export function pickDefaultCamera(cams: CameraInfo[]): string {
@@ -52,16 +77,19 @@ export function pickDefaultCamera(cams: CameraInfo[]): string {
 
 export async function acquireCamera(deviceId?: string): Promise<MediaStream> {
   stopCamera();
-  const video: MediaTrackConstraints = deviceId
-    ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
-    : {
-        facingMode: { ideal: "environment" },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-      };
+  // Do not ask for 1080p — on many phones that selects the telephoto crop
+  // ("mega zoom") instead of the main wide lens. Prefer 1x zoom.
+  const video = (
+    deviceId
+      ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 }, zoom: 1 }
+      : { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 }, zoom: 1 }
+  ) as MediaTrackConstraints;
   const attempts: MediaStreamConstraints[] = [
     { audio: false, video },
-    { audio: false, video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" } },
+    {
+      audio: false,
+      video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" },
+    },
     { audio: false, video: true },
   ];
   let last: unknown;
@@ -69,6 +97,7 @@ export async function acquireCamera(deviceId?: string): Promise<MediaStream> {
     try {
       active = await navigator.mediaDevices.getUserMedia(c);
       owners = 1;
+      await resetZoomToUnity();
       return active;
     } catch (err) {
       last = err;
@@ -151,4 +180,43 @@ export async function setZoom(zoom: number): Promise<void> {
   } catch {
     /* not supported */
   }
+}
+
+/** Snap to optical 1× so Receive never starts on a telephoto crop. */
+export async function resetZoomToUnity(): Promise<number> {
+  const track = currentTrack();
+  if (!track) return 1;
+  const caps = track.getCapabilities?.() as Caps | undefined;
+  if (!caps?.zoom) return 1;
+  const min = caps.zoom.min ?? 1;
+  const max = caps.zoom.max ?? 1;
+  const target = min <= 1 && 1 <= max ? 1 : min;
+  try {
+    await track.applyConstraints({ advanced: [{ zoom: target } as MediaTrackConstraintSet] });
+  } catch {
+    try {
+      await track.applyConstraints({ zoom: target } as MediaTrackConstraintSet);
+    } catch {
+      /* not supported */
+    }
+  }
+  const now = track.getSettings?.() as { zoom?: number } | undefined;
+  return now?.zoom ?? target;
+}
+
+export type ProbeResult = {
+  cameras: CameraInfo[];
+  recommended: string;
+  saved: string;
+};
+
+/** Permission ping + labels, then stop. Lets the user pick a lens before a live zoomed preview. */
+export async function probeCameras(): Promise<ProbeResult> {
+  const stream = await acquireCamera();
+  const cameras = rankCameras(await listCameras());
+  const used = stream.getVideoTracks()[0]?.getSettings?.().deviceId ?? "";
+  releaseCamera();
+  const recommended = pickDefaultCamera(cameras) || used || cameras[0]?.id || "";
+  const saved = loadSavedLens();
+  return { cameras, recommended, saved };
 }
