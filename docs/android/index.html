@@ -1,23 +1,76 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#09090b" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="robots" content="noindex,nofollow,noarchive" />
-    <title>LUX</title>
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@400;500;600;700&display=swap"
-    />
-    <script type="module" crossorigin src="/QRlux/assets/index-BygxY6Zb.js"></script>
-    <link rel="stylesheet" crossorigin href="/QRlux/assets/index-B2N_EcAZ.css">
-  </head>
-  <body class="bg-bg text-fg">
-    <div id="root"></div>
-  </body>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#09090b"/>
+  <meta name="color-scheme" content="dark"/>
+  <meta name="robots" content="noindex,nofollow,noarchive"/>
+  <title>LUX Android</title>
+  <link rel="icon" type="image/svg+xml" href="/QRlux/favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@400;500;600;700&display=swap"/>
+  <link rel="stylesheet" href="/QRlux/lux.css"/>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="/QRlux/"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true">
+      <rect x="2.2" y="2.2" width="7.6" height="7.6" stroke="currentColor" stroke-width="1.8"/>
+      <rect x="14.2" y="2.2" width="7.6" height="7.6" stroke="currentColor" stroke-width="1.8"/>
+      <rect x="2.2" y="14.2" width="7.6" height="7.6" stroke="currentColor" stroke-width="1.8"/>
+      <rect x="15" y="15" width="6" height="6" fill="currentColor"/>
+    </svg>
+      LUX
+    </a>
+    <nav>
+      <a href="/QRlux/how/">Use</a>
+      <a href="/QRlux/s/">Send</a>
+      <a href="/QRlux/r/">Receive</a>
+      <a href="/QRlux/android/" class="on">Android</a>
+      <a class="gh" href="https://github.com/brinza666/QRlux" target="_blank" rel="noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.7 4.6 18.7 4.9 18.7 4.9c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.9 1.2 3.2 0 4.7-2.8 5.7-5.5 6 .4.3.8 1.1.8 2.2V23c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/></svg> GitHub</a>
+    </nav>
+  </header>
+  <main>
+    <p class="kicker">Internal · Android</p>
+    <h1>Two small installers</h1>
+    <p class="lead">Receive on the phone that catches files. Send on the phone that broadcasts. Download one APK at a time. Uninstall the old copy first.</p>
+    <section class="card">
+      <p class="mono">As light</p>
+      <h2>PC screen → phone browser</h2>
+      <ol>
+        <li>On the computer, open Send. It starts with a setup QR, then the Receive APK.</li>
+        <li>On the phone, open Receive. Allow camera, pick the lens that sees the other screen, hold still.</li>
+        <li>When it finishes, tap Download once. Install later from Downloads.</li>
+      </ol>
+      <div class="row">
+        <a class="btn primary" href="/QRlux/s/">Open Send</a>
+        <a class="btn" href="/QRlux/r/">Receive</a>
+      </div>
+    </section>
+    <div class="grid two">
+      <article class="card">
+        <p class="mono">Send</p>
+        <h2>LUX Send</h2>
+        <p>Broadcast a file from the phone screen.</p>
+        <div class="row"><a class="btn primary full" href="https://github.com/brinza666/QRlux/releases/download/v1.0.0/lux-send.apk">lux-send.apk</a></div>
+      </article>
+      <article class="card">
+        <p class="mono">Receive</p>
+        <h2>LUX Receive</h2>
+        <p>Camera decoder. Save reconstructed files to Downloads.</p>
+        <div class="row"><a class="btn primary full" href="https://github.com/brinza666/QRlux/releases/download/v1.0.0/lux-receive.apk">lux-receive.apk</a></div>
+      </article>
+    </div>
+    <p>Source: <a class="fg" href="https://github.com/brinza666/QRlux">github.com/brinza666/QRlux</a>. Copies also in <a class="fg" href="/QRlux/releases/">/releases</a>.</p>
+  </main>
+  <footer class="foot">
+    <div class="foot-inner">
+      <p class="mono">LUX · internal</p>
+      <a href="https://github.com/brinza666/QRlux">github.com/brinza666/QRlux</a>
+    </div>
+  </footer>
+</div>
+</body>
 </html>

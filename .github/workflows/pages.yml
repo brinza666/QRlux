@@ -23,7 +23,20 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - run: npm run build:pages
+      - run: python3 scripts/write-site.py
+      - run: npm run build:mobile
+      - name: Stage Send/Receive apps
+        run: |
+          mkdir -p docs/s docs/r docs/send docs/receive docs/releases
+          cp mobile-dist/index.html docs/app.html
+          cp mobile-dist/index.html docs/s/index.html
+          cp mobile-dist/index.html docs/r/index.html
+          cp mobile-dist/index.html docs/send/index.html
+          cp mobile-dist/index.html docs/receive/index.html
+          rm -rf docs/assets docs/__grok
+          cp -f public/releases/*.apk docs/releases/ || true
+          cp -f public/releases/SHA256SUMS docs/releases/ || true
+          touch docs/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

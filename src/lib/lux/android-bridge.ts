@@ -19,6 +19,9 @@ export function resolveAppMode(): "send" | "receive" | "home" {
   if (injected === "receive" || injected === "send") return injected;
   const hash = window.location.hash.replace("#", "").toLowerCase();
   if (hash === "receive" || hash === "send") return hash;
+  const path = window.location.pathname.replace(/\/+$/, "").toLowerCase();
+  if (/\/(s|send)(\/index\.html)?$/.test(path)) return "send";
+  if (/\/(r|receive|go)(\/index\.html)?$/.test(path)) return "receive";
   return "home";
 }
 
