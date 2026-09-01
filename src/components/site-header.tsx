@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { FeedbackToggle } from "@/components/feedback-toggle";
+import { GitHubLink } from "@/components/github-link";
 import { LuxMark } from "@/components/lux-mark";
 
 const links = [
@@ -12,11 +13,7 @@ const links = [
 export function SiteHeader() {
   return (
     <header className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6">
-      <Link
-        to="/"
-        className="flex items-center gap-2 text-fg"
-        aria-label="LUX home"
-      >
+      <Link to="/" className="flex items-center gap-2 text-fg" aria-label="LUX home">
         <LuxMark />
         <span className="font-semibold tracking-tight">LUX</span>
       </Link>
@@ -31,6 +28,7 @@ export function SiteHeader() {
             {l.label}
           </Link>
         ))}
+        <GitHubLink />
         <FeedbackToggle className="size-9" />
       </nav>
     </header>

@@ -1,15 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Camera, Smartphone, Upload } from "lucide-react";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({ component: Home });
 
-function Home() {
+export function Home() {
   return (
-    <div className="min-h-dvh bg-bg text-fg">
+    <div className="flex min-h-dvh flex-col bg-bg text-fg">
       <SiteHeader />
-      <main className="mx-auto flex w-full max-w-2xl flex-col gap-12 px-4 pb-20 sm:px-6">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-12 px-4 pb-20 sm:px-6">
         <section className="pt-6 sm:pt-10">
           <p className="font-mono text-[0.7rem] tracking-[0.22em] text-subtle uppercase">
             Internal · air-gapped
@@ -53,6 +54,7 @@ function Home() {
           </ol>
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 }

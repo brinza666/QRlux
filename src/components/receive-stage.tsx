@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CompleteCard } from "@/components/complete-card";
 import { FeedbackToggle } from "@/components/feedback-toggle";
+import { GitHubLink } from "@/components/github-link";
 import { LockPill, ScanHud, Viewfinder } from "@/components/scan-hud";
 import { StatGrid } from "@/components/stat-grid";
 import { Button } from "@/components/ui/button";
@@ -412,6 +413,7 @@ export function ReceiveStage({ variant }: { variant: "page" | "app" }) {
       <div className="lux-app flex min-h-dvh flex-col bg-bg text-fg">
         <header className="flex items-center justify-between px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2">
           <p className="font-mono text-xs tracking-[0.18em] text-subtle uppercase">LUX Receive</p>
+          <GitHubLink className="px-2" />
         </header>
         {result ? (
           <div className="px-4 pb-3">

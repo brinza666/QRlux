@@ -19,14 +19,14 @@ This project is for internal use. Do not announce it. The public site is noindex
 | [lux-receive.apk](https://github.com/brinza666/QRlux/releases/download/v1.0.0/lux-receive.apk) | Catch a file |
 | [lux-send.apk](https://github.com/brinza666/QRlux/releases/download/v1.0.0/lux-send.apk) | Broadcast from a phone screen |
 
-Install one at a time. Android will warn about unknown apps — allow this browser, then Install. Uninstall the old copy before putting a new one on.
+Install one at a time. Android may warn about unknown apps — allow this browser, then Install.
 
-Keep the sending screen in the foreground and bright. If Receive looks zoomed or shows the floor, pick another lens before scanning.
-
-Files up to 16 MB. There is no encryption — anyone who can see the screen can rebuild the file.
+Keep the sending screen in the foreground and bright.
 
 ## Site
 
 - [Start](https://brinza666.github.io/QRlux/)
-- [Send](https://brinza666.github.io/QRlux/s) — `…/QRlux/s`
-- [Receive](https://brinza666.github.io/QRlux/r) — `…/QRlux/r`
+- [Use](https://brinza666.github.io/QRlux/how)
+- [Send](https://brinza666.github.io/QRlux/s)
+- [Receive](https://brinza666.github.io/QRlux/r)
+- [Source](https://github.com/brinza666/QRlux)

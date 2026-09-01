@@ -19,6 +19,7 @@ INTERNAL.md
 docs/RECOVERY.md
 *.tsbuildinfo
 mobile-dist/
+pages-dist/
 android/.gradle/
 android/build/
 android/app/build/

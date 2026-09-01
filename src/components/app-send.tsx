@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FeedbackToggle } from "@/components/feedback-toggle";
+import { GitHubLink } from "@/components/github-link";
 import { QrPlate } from "@/components/qr-plate";
 import { TunePanel } from "@/components/tune-panel";
 import { Button } from "@/components/ui/button";
@@ -171,6 +172,7 @@ export function AppSend() {
           {deviceLabel}
           {stats.txFps ? ` · ${stats.txFps.toFixed(0)} fps` : ""}
         </p>
+        <GitHubLink className="px-2" />
         <FeedbackToggle className="size-9 shrink-0" />
       </header>
 

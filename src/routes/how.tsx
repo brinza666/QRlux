@@ -1,14 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/how")({ component: HowPage });
 
-function HowPage() {
+export function HowPage() {
   return (
-    <div className="min-h-dvh bg-bg text-fg">
+    <div className="flex min-h-dvh flex-col bg-bg text-fg">
       <SiteHeader />
-      <main className="mx-auto w-full max-w-2xl px-4 pb-24 sm:px-6">
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-24 sm:px-6">
         <p className="pt-6 font-mono text-[0.7rem] tracking-[0.22em] text-subtle uppercase">
           Internal use
         </p>
@@ -52,6 +53,7 @@ function HowPage() {
           </Button>
         </div>
       </main>
+      <SiteFooter />
     </div>
   );
 }

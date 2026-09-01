@@ -22,6 +22,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "build:mobile": "vite build --config vite.mobile.config.ts",
+    "build:pages": "sh scripts/build-pages.sh",
     "build:apks": "sh scripts/build-apks.sh"
   },
   "dependencies": {

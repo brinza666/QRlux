@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppReceive } from "@/components/app-receive";
 import { AppSend } from "@/components/app-send";
+import { GitHubLink } from "@/components/github-link";
 import { getLuxAndroid, resolveAppMode } from "@/lib/lux/android-bridge";
 
 type Mode = "send" | "receive" | "home";
@@ -65,7 +66,10 @@ export function App() {
   if (mode === "home") {
     return (
       <div className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 bg-bg px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] text-fg">
-        <p className="font-mono text-xs tracking-[0.18em] text-subtle uppercase">LUX</p>
+        <div className="flex items-center justify-between">
+          <p className="font-mono text-xs tracking-[0.18em] text-subtle uppercase">LUX</p>
+          <GitHubLink className="px-0" />
+        </div>
         <h1 className="text-3xl font-medium tracking-tight">Files, as light.</h1>
         <p className="text-sm leading-relaxed text-muted">
           On a computer open Send — it starts beaming the Receive installer. On this phone open
