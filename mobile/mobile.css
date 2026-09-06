@@ -24,6 +24,33 @@ body {
   height: 100%;
   height: 100dvh;
   overflow: hidden;
+  min-width: 0;
+  max-width: 100vw;
+}
+
+/* Receive is taller than one screen because it includes the camera, lens picker,
+   zoom control and stats. It must scroll or the controls below the preview are
+   unreachable on phones. */
+.lux-app:has(.lux-finder) {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Never let the intrinsic 1080x1080 canvas enlarge the Android WebView layout.
+   Reserve vertical room for the Send header, status and buttons. */
+.lux-app:has(canvas[aria-label="Fountain QR stream"]) div:has(> canvas[aria-label="Fountain QR stream"]) {
+  width: min(92vw, calc(100dvh - 11.5rem)) !important;
+  max-width: min(92vw, calc(100dvh - 11.5rem)) !important;
+  min-width: 0 !important;
+  flex: 0 1 auto;
+}
+
+.lux-app canvas[aria-label="Fountain QR stream"] {
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
 }
 
 .lux-cam-src {
@@ -48,6 +75,7 @@ body {
 .lux-finder {
   display: block;
   width: 100%;
+  max-width: 100vw;
   object-fit: contain;
   background: #09090b;
 }
