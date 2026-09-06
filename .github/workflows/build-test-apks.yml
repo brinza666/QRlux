@@ -1,0 +1,67 @@
+name: Build test APKs
+
+on:
+  push:
+    branches:
+      - fix/android-camera-qr-viewport
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-apks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Build mobile web bundle
+        run: npm run build:mobile
+
+      - name: Build Send and Receive APKs
+        working-directory: android
+        run: gradle assembleSendRelease assembleReceiveRelease --no-daemon --stacktrace
+
+      - name: Collect APKs
+        run: |
+          mkdir -p test-apks
+          cp android/app/build/outputs/apk/send/release/lux-send.apk test-apks/lux-send-fixed.apk
+          cp android/app/build/outputs/apk/receive/release/lux-receive.apk test-apks/lux-receive-fixed.apk
+          sha256sum test-apks/*.apk > test-apks/SHA256SUMS
+          ls -lh test-apks
+
+      - name: Upload test APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: qrlux-fixed-test-apks
+          path: test-apks/
+          if-no-files-found: error
+          retention-days: 14

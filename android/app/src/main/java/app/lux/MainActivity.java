@@ -60,8 +60,11 @@ public class MainActivity extends Activity {
         s.setSupportZoom(false);
         s.setBuiltInZoomControls(false);
         s.setDisplayZoomControls(false);
-        s.setUseWideViewPort(true);
-        s.setLoadWithOverviewMode(true);
+        // Respect the page's mobile viewport meta tag. The previous wide/overview
+        // combination could make the 1080px QR canvas define a desktop-width
+        // layout viewport on some Android WebViews, clipping the QR off-screen.
+        s.setUseWideViewPort(false);
+        s.setLoadWithOverviewMode(false);
         s.setTextZoom(100);
 
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
