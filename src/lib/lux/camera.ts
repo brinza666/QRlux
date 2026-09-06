@@ -90,21 +90,16 @@ export function pickDefaultCamera(cams: CameraInfo[]): string {
 
 type Caps = { torch?: boolean; zoom?: { min: number; max: number } };
 
-function videoConstraints(deviceId?: string, tightZoom = true): MediaTrackConstraints {
-  const base: MediaTrackConstraints = deviceId
+function videoConstraints(deviceId?: string): MediaTrackConstraints {
+  return deviceId
     ? { deviceId: { exact: deviceId } }
     : { facingMode: { ideal: "environment" } };
-  if (tightZoom) {
-    (base as MediaTrackConstraints & { zoom?: unknown }).zoom = { ideal: 1, max: 1.25 };
-  }
-  return base;
 }
 
 export async function acquireCamera(deviceId?: string): Promise<MediaStream> {
   stopCamera();
   const attempts: MediaStreamConstraints[] = [
-    { audio: false, video: videoConstraints(deviceId, true) },
-    { audio: false, video: videoConstraints(deviceId, false) },
+    { audio: false, video: videoConstraints(deviceId) },
     { audio: false, video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" } },
     { audio: false, video: true },
   ];
@@ -163,23 +158,30 @@ export async function setTorch(on: boolean): Promise<void> {
 export async function setZoom(zoom: number): Promise<void> {
   const track = currentTrack();
   if (!track) return;
+  const caps = track.getCapabilities?.() as Caps | undefined;
+  const min = caps?.zoom?.min ?? zoom;
+  const max = caps?.zoom?.max ?? zoom;
+  const target = Math.max(min, Math.min(max, zoom));
   try {
-    await track.applyConstraints({ advanced: [{ zoom } as MediaTrackConstraintSet] });
+    await track.applyConstraints({ advanced: [{ zoom: target } as MediaTrackConstraintSet] });
   } catch {
-    /* not supported */
+    try {
+      await track.applyConstraints({ zoom: target } as MediaTrackConstraintSet);
+    } catch {
+      /* not supported */
+    }
   }
 }
 
-/** Snap to optical 1× so Receive never starts on a telephoto crop. */
+/** Start at the widest zoom ratio exposed by the selected camera. */
 export async function resetZoomToUnity(): Promise<number> {
   const track = currentTrack();
   if (!track) return 1;
   const caps = track.getCapabilities?.() as Caps | undefined;
-  const settings = track.getSettings?.() as { zoom?: number; focusMode?: string };
   if (caps?.zoom) {
     const min = caps.zoom.min ?? 1;
-    const max = caps.zoom.max ?? 1;
-    const target = min <= 1 && 1 <= max ? 1 : min;
+    const max = caps.zoom.max ?? min;
+    const target = Math.min(min, max);
     try {
       await track.applyConstraints({ advanced: [{ zoom: target } as MediaTrackConstraintSet] });
     } catch {
@@ -197,7 +199,6 @@ export async function resetZoomToUnity(): Promise<number> {
   } catch {
     /* not supported */
   }
-  void settings;
   return currentZoom();
 }
 
