@@ -72,7 +72,12 @@ export function createScanner(video: HTMLVideoElement, work: HTMLCanvasElement) 
       }
       const ctx = work.getContext("2d", { willReadFrequently: true });
       if (!ctx || !video.videoWidth) return null;
-      const w = Math.min(1280, video.videoWidth);
+
+      // Spend pixels on initial acquisition, then reduce jsQR work once the fountain is locked.
+      // LUX always emits a dark QR on a light plate, so the locked path does not need the
+      // expensive inverted-image retry on every frame.
+      const targetWidth = locked ? 960 : 1280;
+      const w = Math.min(targetWidth, video.videoWidth);
       const h = Math.round((video.videoHeight * w) / video.videoWidth);
       if (work.width !== w || work.height !== h) {
         work.width = w;
@@ -80,7 +85,9 @@ export function createScanner(video: HTMLVideoElement, work: HTMLCanvasElement) 
       }
       ctx.drawImage(video, 0, 0, w, h);
       const img = ctx.getImageData(0, 0, w, h);
-      const code = jsQR(img.data, w, h, { inversionAttempts: "attemptBoth" });
+      const code = jsQR(img.data, w, h, {
+        inversionAttempts: locked ? "dontInvert" : "attemptBoth",
+      });
       if (code?.data) lastHit = performance.now();
       return code?.data ?? null;
     },
