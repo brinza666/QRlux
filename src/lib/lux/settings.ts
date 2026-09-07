@@ -12,7 +12,7 @@ export type Tune = {
   density: Density;
 };
 
-const KEY = "lux.tune.v2";
+const KEY = "lux.tune.v3";
 
 export const TUNE_DEFAULT: Tune = {
   fps: FPS_DEFAULT,
