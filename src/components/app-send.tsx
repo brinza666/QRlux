@@ -177,12 +177,8 @@ export function AppSend() {
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col px-2">
-        <div className="mx-auto flex w-full max-w-[min(100vw,100dvh)] flex-1 items-center justify-center">
-          <QrPlate
-            canvasRef={canvasRef}
-            size="hero"
-            className="w-full max-w-[min(96vw,96dvh)]"
-          />
+        <div className="mx-auto flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden py-1">
+          <QrPlate canvasRef={canvasRef} size="hero" />
         </div>
         <p className="px-2 pt-2 text-center text-sm font-medium">
           {phase === "handshake"
