@@ -15,13 +15,13 @@ export type Tune = {
 const KEY = "lux.tune.v2";
 
 export const TUNE_DEFAULT: Tune = {
-  fps: 10,
-  hold: 2,
-  headerEvery: 3,
-  echoPct: 12,
+  fps: FPS_DEFAULT,
+  hold: 1,
+  headerEvery: 5,
+  echoPct: 8,
   handshakeLoop: false,
   handshakeSec: 0,
-  density: "easy",
+  density: "balanced",
 };
 
 export const TUNE_META = {
